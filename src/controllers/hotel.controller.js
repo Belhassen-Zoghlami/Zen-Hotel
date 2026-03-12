@@ -32,7 +32,7 @@ exports.GetAllHotels = async (req,res)=>
 {
     try
     {
-        const hotels = await Hotel.find().populate('owner','name email');
+        const hotels = await Hotel.find({ owner : req.user.id }).populate('owner','name email');
         if (!hotels)
             {
                 return res.status(404).json({ message: 'no hotels found for this user'});
