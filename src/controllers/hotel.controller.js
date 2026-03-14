@@ -32,7 +32,20 @@ exports.GetAllHotels = async (req,res)=>
 {
     try
     {
-        const hotels = await Hotel.find({ owner : req.user.id }).populate('owner','name email');
+        //gettin per search criterias 
+        const query = {};
+        if(req.query.city)
+            query.location = { $regex: req.query.city, $options: 'i'};
+        if(req.query.rating)
+            query.rating = {$regex: req.query.rating[0], $options: 'i'};
+
+        let hotels;
+        if (!req.user || !['admin','owner'].includes(req.user.role))
+            hotels = await Hotel.find(query).select("-owner -createdAt -updatedAt -__v");
+        else
+            hotels = await Hotel.find({ owner : req.user.id }).populate('owner','name email');
+            
+            
         if (!hotels)
             {
                 return res.status(404).json({ message: 'no hotels found for this user'});
@@ -42,7 +55,7 @@ exports.GetAllHotels = async (req,res)=>
 
     }catch(err)
     {
-        res.status(500).json({ message: 'Error finding hotels'})
+        res.status(500).json({ message: 'Error finding hotels',error: err.message})
     }
 };
 
@@ -51,8 +64,11 @@ exports.GetHotel = async (req,res) =>
 {
     try
     {
-
-        const hotel = await Hotel.findById(req.params.id);
+        let hotel;
+        if( !req.user || !['admin','owner'].includes(req.user.role) )
+            hotel = await Hotel.findById(req.params.id).select("-owner -createdAt -updatedAt -__v");
+        else
+            hotel = await Hotel.findById(req.params.id);
         
         if(!hotel)
             {

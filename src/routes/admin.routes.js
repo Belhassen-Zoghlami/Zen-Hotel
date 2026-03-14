@@ -13,8 +13,22 @@ router.get(
 );
 
 
+router.get(
+    '/users/:userId',
+    auth,
+    reqRole('admin'),
+    adminController.getUser
+);
+
+router.delete(
+    'users/:userId',
+    auth,reqRole('admin'),
+    adminController.deleteUser
+);
+
+
 router.patch(
-    '/validate-owner/:userId',
+    '/users/validate-owner/:userId',
     auth,
     reqRole('admin'),
     adminController.validateOwner
@@ -22,7 +36,7 @@ router.patch(
 
 
 router.patch(
-    '/toggle-user/:userId',
+    '/users/toggle-user/:userId',
     auth,
     reqRole('admin'),
     adminController.toggleUserStatus
