@@ -9,7 +9,14 @@ const roomSchema = new mongoose.Schema
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Hotel',
             required: true
-        }
+        },
+        images:
+        [
+            {
+                type:String,
+                required:true
+            }
+        ]
         ,roomNumber:
         {
             type:String,

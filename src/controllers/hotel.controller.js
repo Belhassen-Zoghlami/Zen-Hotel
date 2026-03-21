@@ -6,11 +6,15 @@ exports.CreateHoltel = async (req,res)=>
 {
     try
     {
+        const imagePaths = req.files 
+        ? req.files.map(file => file.path)
+        : [];
 
         const hotel = await Hotel.create
         ({
             name:req.body.name,
             location:req.body.location,
+            images: imagePaths,
             rating: req.body.rating,
             description: req.body.description,
             owner: req.user.id
@@ -21,7 +25,7 @@ exports.CreateHoltel = async (req,res)=>
 
     {
 
-        res.status(500).json({ message: 'Error creating hotel'});
+        res.status(500).json({ message: 'Error creating hotel',error: err.message});
     }
 
 
