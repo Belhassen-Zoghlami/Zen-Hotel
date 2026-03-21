@@ -3,11 +3,12 @@ const router = express.Router();
 const auth = require('../middleware/auth.middleware');
 const reqRoles = require('../middleware/role.middleware');
 const optAuth = require('../middleware/OptAuth.middleware');
+const upload = require('../middleware/images.middleware');
 
 const hotelController = require('../controllers/hotel.controller');
 
 //create route
-router.post('/',auth,reqRoles('owner','admin'),hotelController.CreateHoltel);
+router.post('/',auth,reqRoles('owner','admin'),upload.array("images",5),hotelController.CreateHoltel);
 //get all trivagos route
 router.get('/',optAuth,hotelController.GetAllHotels);
 //get hotel by id route
