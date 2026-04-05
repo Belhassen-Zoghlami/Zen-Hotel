@@ -1,3 +1,16 @@
+# Environment
 .env
-node_modules/
-images/
+*.env
+
+# Backend
+backend/node_modules/
+backend/images/
+
+# Frontend
+frontend/node_modules/
+frontend/.angular/
+frontend/dist/
+
+# General
+*.log
+.DS_Store
