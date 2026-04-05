@@ -1,0 +1,52 @@
+nav {
+  background-color: var(--zen-bg-primary);
+  border-bottom: 1px solid var(--zen-border);
+  padding: 1rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
+  .navbar-brand {
+    color: var(--zen-gold);
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--zen-gold-light);
+    }
+  }
+
+  .nav-link {
+    color: var(--zen-text-secondary);
+    font-size: 0.9rem;
+    transition: color 0.2s;
+
+    &:hover {
+      color: var(--zen-text-primary);
+    }
+  }
+
+  .btn-gold {
+    background-color: var(--zen-gold);
+    color: var(--zen-bg-primary);
+    padding: 0.4rem 1.2rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: var(--zen-gold-light);
+    }
+  }
+
+  .navbar-toggler {
+    border-color: var(--zen-border);
+    .navbar-toggler-icon {
+      filter: invert(1);
+    }
+  }
+}
