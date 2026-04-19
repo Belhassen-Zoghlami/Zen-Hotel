@@ -70,6 +70,12 @@
   display: block;
 }
 
+.success {
+  color: var(--zen-success);
+  font-size: 0.85rem;
+  display: block;
+}
+
 .btn-zen {
   background: var(--zen-gold);
   color: var(--zen-bg-primary);
