@@ -1,30 +1,66 @@
 <nav class="navbar navbar-expand-lg">
   <div class="container">
 
-    <!-- Logo -->
-    <a class="navbar-brand" href="#">
-      ZenHotels
-    </a>
+    <a class="navbar-brand" routerLink="/">ZenHotels</a>
 
-    <!-- Toggle mobile -->
     <button class="navbar-toggler" type="button"
       data-bs-toggle="collapse"
       data-bs-target="#navMenu">
       <span class="navbar-toggler-icon"></span>
     </button>
 
-    <!-- Menu -->
     <div class="collapse navbar-collapse" id="navMenu">
       <ul class="navbar-nav ms-auto align-items-center gap-2">
+
         <li class="nav-item">
-          <a class="nav-link" href="#">Hotels</a>
+          <a class="nav-link" routerLink="/hotels">Hotels</a>
         </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#">Login</a>
-        </li>
-        <li class="nav-item">
-          <a class="btn-gold" href="#">Sign Up</a>
-        </li>
+
+        @if (currentUser$ | async; as user) {
+          <!-- User connecté -->
+          <li class="nav-item">
+            <span class="user-name">
+              <i class="pi pi-user"></i>
+              {{ user.name }}
+            </span>
+          </li>
+          <li class="nav-item">
+            <span class="user-role">{{ user.role }}</span>
+          </li>
+
+          @if (user.role === 'admin') {
+            <li class="nav-item">
+              <a class="nav-link" routerLink="/dashboard/admin">Dashboard</a>
+            </li>
+          }
+          @if (user.role === 'owner') {
+            <li class="nav-item">
+              <a class="nav-link" routerLink="/dashboard/owner">Dashboard</a>
+            </li>
+          }
+          @if (user.role === 'client') {
+            <li class="nav-item">
+              <a class="nav-link" routerLink="/dashboard/client">Dashboard</a>
+            </li>
+          }
+
+          <li class="nav-item">
+            <button class="btn-logout" (click)="onLogout()">
+              <i class="pi pi-sign-out"></i>
+              Logout
+            </button>
+          </li>
+
+        } @else {
+          <!-- User non connecté -->
+          <li class="nav-item">
+            <a class="nav-link" routerLink="/login">Login</a>
+          </li>
+          <li class="nav-item">
+            <a class="btn-gold" routerLink="/register">Sign Up</a>
+          </li>
+        }
+
       </ul>
     </div>
 
