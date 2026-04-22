@@ -76,7 +76,7 @@ router.get('/:hotelId',optAuth,roomController.GetHotelRooms);
 //create room route
 router.post('/:hotelId',auth,reqRoles('owner','admin'),upload.array("images",5),roomController.CreateRoom);
 //get room by id route
-router.get('/:hotelId/:roomId',auth,reqRoles('owner','admin'),roomController.GetRoom);
+router.get('/:hotelId/:roomId',auth,roomController.GetRoom);
 //update room route
 router.patch('/:hotelId/:roomId',auth,reqRoles('owner','admin'),roomController.UpdateRoom);
 //delete room route
