@@ -1,1 +1,170 @@
-<p>admin works!</p>
+<div class="dashboard-wrapper">
+  <div class="container">
+
+    <!-- Header -->
+    <div class="dashboard-header">
+      <h2>Admin <span class="gold">Dashboard</span></h2>
+      <p>Manage users, hotels and bookings</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <div class="stat-card">
+          <i class="pi pi-users"></i>
+          <div>
+            <span class="stat-number">{{ users.length }}</span>
+            <span class="stat-label">Total Users</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card">
+          <i class="pi pi-home"></i>
+          <div>
+            <span class="stat-number">{{ ownersCount }}</span>
+            <span class="stat-label">Owners</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card">
+          <i class="pi pi-calendar"></i>
+          <div>
+            <span class="stat-number">{{ bookings.length }}</span>
+            <span class="stat-label">Bookings</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card">
+          <i class="pi pi-dollar"></i>
+          <div>
+            <span class="stat-number">${{ totalRevenue }}</span>
+            <span class="stat-label">Revenue</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs mb-4">
+      <button class="tab-btn" 
+        [class.active]="activeTab === 'users'"
+        (click)="activeTab = 'users'">
+        Users
+      </button>
+      <button class="tab-btn"
+        [class.active]="activeTab === 'bookings'"
+        (click)="activeTab = 'bookings'">
+        Bookings
+      </button>
+    </div>
+
+    <!-- Users Tab -->
+    @if (activeTab === 'users') {
+      <div class="section-card">
+        <h3>All Users</h3>
+        <div class="table-responsive">
+          <table class="table zen-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Validated</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (user of users; track user._id) {
+                <tr>
+                  <td>{{ user.name }}</td>
+                  <td>{{ user.email }}</td>
+                  <td>
+                    <span class="role-badge {{ user.role }}">{{ user.role }}</span>
+                  </td>
+                  <td>
+                    <span class="badge-status {{ user.isActive ? 'confirmed' : 'cancelled' }}">
+                      {{ user.isActive ? 'Active' : 'Inactive' }}
+                    </span>
+                  </td>
+                  <td>
+                    @if (user.role === 'owner') {
+                      <span class="badge-status {{ user.isValidated ? 'confirmed' : 'pending' }}">
+                        {{ user.isValidated ? 'Validated' : 'Pending' }}
+                      </span>
+                    } @else {
+                      <span class="text-muted">—</span>
+                    }
+                  </td>
+                  <td>
+                    <div class="action-btns">
+                      @if (user.role === 'owner' && !user.isValidated) {
+                        <button class="btn-confirm"
+                          (click)="validateOwner(user._id)">
+                          Validate
+                        </button>
+                      }
+                      <button class="btn-toggle"
+                        (click)="toggleStatus(user._id)">
+                        {{ user.isActive ? 'Disable' : 'Enable' }}
+                      </button>
+                      @if (user.role !== 'admin') {
+                        <button class="btn-cancel"
+                          (click)="deleteUser(user._id)">
+                          Delete
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- Bookings Tab -->
+    @if (activeTab === 'bookings') {
+      <div class="section-card">
+        <h3>All Bookings</h3>
+        <div class="table-responsive">
+          <table class="table zen-table">
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th>Hotel</th>
+                <th>Room</th>
+                <th>Check In</th>
+                <th>Check Out</th>
+                <th>Total</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (booking of bookings; track booking._id) {
+                <tr>
+                  <td>{{ booking.client?.name }}</td>
+                  <td>{{ booking.hotel?.name }}</td>
+                  <td>{{ booking.room?.roomNumber }}</td>
+                  <td>{{ booking.checkIn | date:'mediumDate' }}</td>
+                  <td>{{ booking.checkOut | date:'mediumDate' }}</td>
+                  <td class="gold">${{ booking.totalPrice }}</td>
+                  <td>
+                    <span class="badge-status {{ booking.status }}">
+                      {{ booking.status }}
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+  </div>
+</div>

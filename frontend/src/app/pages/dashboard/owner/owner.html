@@ -1,1 +1,131 @@
-<p>owner works!</p>
+<div class="dashboard-wrapper">
+  <div class="container">
+
+    <!-- Header -->
+    <div class="dashboard-header">
+      <h2>Owner <span class="gold">Dashboard</span></h2>
+      <p>Manage your hotels and bookings</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="stat-card">
+          <i class="pi pi-building"></i>
+          <div>
+            <span class="stat-number">{{ hotels.length }}</span>
+            <span class="stat-label">My Hotels</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="stat-card">
+          <i class="pi pi-check-circle"></i>
+          <div>
+            <span class="stat-number">{{ confirmedCount }}</span>
+            <span class="stat-label">Confirmed</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="stat-card">
+          <i class="pi pi-clock"></i>
+          <div>
+            <span class="stat-number">{{ pendingCount }}</span>
+            <span class="stat-label">Pending</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- My Hotels -->
+    <div class="section-card mb-4">
+      <h3>My Hotels</h3>
+
+      @if (hotels.length === 0) {
+        <div class="empty-state">
+          <i class="pi pi-building"></i>
+          <p>No hotels yet</p>
+        </div>
+      } @else {
+        <div class="hotels-list">
+          @for (hotel of hotels; track hotel._id) {
+            <div class="hotel-item"
+              [class.active]="hotel._id === selectedHotelId"
+              (click)="loadBookings(hotel._id)">
+              <div>
+                <span class="hotel-name">{{ hotel.name }}</span>
+                <span class="hotel-location">
+                  <i class="pi pi-map-marker"></i>
+                  {{ hotel.location }}
+                </span>
+              </div>
+              <span class="rating-badge">{{ hotel.rating }} ★</span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Bookings -->
+    <div class="section-card">
+      <h3>Bookings</h3>
+
+      @if (bookings.length === 0) {
+        <div class="empty-state">
+          <i class="pi pi-calendar-times"></i>
+          <p>No bookings for this hotel</p>
+        </div>
+      } @else {
+        <div class="table-responsive">
+          <table class="table zen-table">
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th>Room</th>
+                <th>Check In</th>
+                <th>Check Out</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (booking of bookings; track booking._id) {
+                <tr>
+                  <td>{{ booking.client?.name }}</td>
+                  <td>{{ booking.room?.roomNumber }}</td>
+                  <td>{{ booking.checkIn | date:'mediumDate' }}</td>
+                  <td>{{ booking.checkOut | date:'mediumDate' }}</td>
+                  <td class="gold">${{ booking.totalPrice }}</td>
+                  <td>
+                    <span class="badge-status {{ booking.status }}">
+                      {{ booking.status }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="action-btns">
+                      @if (booking.status === 'pending') {
+                        <button class="btn-confirm"
+                          (click)="confirmBooking(booking._id)">
+                          Confirm
+                        </button>
+                      }
+                      @if (booking.status !== 'cancelled') {
+                        <button class="btn-cancel"
+                          (click)="cancelBooking(booking._id)">
+                          Cancel
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+  </div>
+</div>
