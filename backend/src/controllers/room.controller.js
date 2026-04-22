@@ -1,6 +1,6 @@
 const Room = require('../models/room.model');
 const Hotel = require('../models/hotel.model');
-
+const mongoose = require('mongoose');
 //room creation
 exports.CreateRoom = async(req,res) =>
 
@@ -12,9 +12,7 @@ exports.CreateRoom = async(req,res) =>
             if (!hotel)
                 return res.status(404).json({message: 'cant create room, hotel not found'});
             if (hotel.owner.toString() !== req.user.id && req.user.role !== 'admin')
-                return res.status(403).json({message: 'Access Unauthorized'});
-            
-            
+                return res.status(403).json({message: 'Access Unauthorized'});            
             const room = await Room.create
             
             (
@@ -23,7 +21,7 @@ exports.CreateRoom = async(req,res) =>
                     roomNumber: req.body.roomNumber,
                     type: req.body.type,
                     capacity: req.body.capacity,
-                    pricePerNight: req.body.pricePerNight,
+                    pricePerNight: Number(req.body.pricePerNight),
                     amenities: req.body.amenities,
                     description: req.body.description,
                     isAvailable: req.body.isAvailable,

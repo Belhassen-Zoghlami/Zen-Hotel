@@ -17,7 +17,7 @@ exports.CreateHoltel = async (req,res)=>
             images: imagePaths,
             rating: req.body.rating,
             description: req.body.description,
-            owner: req.user.id
+            owner: mongoose.Types.ObjectId(req.user.id)
         });
         res.status(201).json({hotel});
     }
