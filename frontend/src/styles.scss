@@ -1,1 +1,38 @@
-/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@300;400;500;600&display=swap');
+
+:root {
+  --zen-bg-primary: #0f172a;
+  --zen-bg-secondary: #1e293b;
+  --zen-bg-card: #1e293b;
+  --zen-gold: #c9a84c;
+  --zen-gold-light: #e2c97e;
+  --zen-text-primary: #f1f5f9;
+  --zen-text-secondary: #94a3b8;
+  --zen-text-muted: #475569;
+  --zen-border: #334155;
+  --zen-success: #10b981;
+  --zen-danger: #ef4444;
+  --zen-warning: #f59e0b;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--zen-bg-primary);
+  color: var(--zen-text-primary);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+}
+
+h1, h2, h3 {
+  font-family: 'Playfair Display', serif;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--zen-bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--zen-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--zen-gold); }
