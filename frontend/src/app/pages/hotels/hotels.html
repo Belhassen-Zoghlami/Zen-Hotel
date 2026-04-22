@@ -1,0 +1,58 @@
+<div class="hotels-wrapper">
+  <div class="container">
+
+    <!-- Header -->
+    <div class="hotels-header">
+      <h2>Explore <span class="gold">Hotels</span></h2>
+      <p>Find your perfect stay</p>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-bar">
+      <input
+        type="text"
+        class="zen-input"
+        placeholder="Search by city..."
+        [(ngModel)]="cityFilter"
+        (ngModelChange)="onFilter()"/>
+      <select class="zen-input" [(ngModel)]="ratingFilter" (change)="onFilter()">
+        <option value="">All ratings</option>
+        <option value="1">1 Star</option>
+        <option value="2">2 Stars</option>
+        <option value="3">3 Stars</option>
+        <option value="4">4 Stars</option>
+        <option value="5">5 Stars</option>
+      </select>
+    </div>
+
+    <!-- Hotels Grid -->
+    @if (hotels.length === 0) {
+      <div class="empty-state">
+        <i class="pi pi-building"></i>
+        <p>No hotels found</p>
+      </div>
+    } @else {
+      <div class="row g-4">
+        @for (hotel of hotels; track hotel._id) {
+          <div class="col-md-4">
+            <div class="hotel-card" (click)="goToHotel(hotel._id)">
+              <div class="card-img">
+                <span class="card-badge">{{ hotel.rating }} ★</span>
+              </div>
+              <div class="card-body">
+                <h3>{{ hotel.name }}</h3>
+                <p class="location">
+                  <i class="pi pi-map-marker"></i>
+                  {{ hotel.location }}
+                </p>
+                <p class="description">{{ hotel.description }}</p>
+                <button class="btn-view">View Rooms →</button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+  </div>
+</div>

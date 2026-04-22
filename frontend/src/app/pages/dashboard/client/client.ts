@@ -1,4 +1,4 @@
-import { Component, inject} from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit} from '@angular/core';
 import { BookingService } from '../../../core/services/booking';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -9,21 +9,25 @@ import { RouterLink } from '@angular/router';
   templateUrl: './client.html',
   styleUrl: './client.scss',
 })
-export class Client {
+export class Client implements OnInit {
   private bookingService = inject(BookingService);
+  private cdr = inject(ChangeDetectorRef);
+
   bookings: any[] = [];
 
-  ngOnInit(): void {
-    this.bookingService.getMyBookings().subscribe({
-      next: (res: any) => {
-        this.bookings = res;
-      },
-      error: (err) => {
-        console.log(err);
-      },
-    });
-  }
+ngOnInit(): void {
+  this.loadBookings();
+}
 
+loadBookings(): void {
+  this.bookingService.getMyBookings().subscribe({
+    next: (res: any) => {
+      this.bookings = res;
+      this.cdr.detectChanges();
+    },
+    error: (err) => console.log(err)
+  });
+}
   cancelBooking(bookingId: string): void {
     this.bookingService.cancelBooking(bookingId).subscribe({
       next: () => {

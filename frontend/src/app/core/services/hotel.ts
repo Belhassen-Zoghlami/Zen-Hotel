@@ -1,52 +1,51 @@
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
 
 @Injectable({
-  providedIn: 'root',
+  providedIn: 'root'
 })
 export class HotelService {
+
   private http = inject(HttpClient);
   private apiUrl = 'http://localhost:3000/api/Hotel';
 
-
-  getHotels(filters?: any){
+  getHotels(filters?: any): Observable<any> {
     let query = '';
     if (filters?.city) query += `?city=${filters.city}`;
-    if (filters?.rating) query+= `${query ? '&' : '?'}rating=${filters.rating}`;
-    return this.http.get(`${this.apiUrl}${query}`),
-    { withCredentials: true}
-  }
-
-  // Get hotel by id
-  getHotel(id: string) {
-    return this.http.get(`${this.apiUrl}/${id}`, 
+    if (filters?.rating) query += `${query ? '&' : '?'}rating=${filters.rating}`;
+    return this.http.get(`${this.apiUrl}${query}`, 
       { withCredentials: true }
     );
   }
 
-  // Create hotel (owner)
-  createHotel(data: any) {
+  getHotel(id: string): Observable<any> {
+  return this.http.get(`${this.apiUrl}/${id}`, 
+    { withCredentials: true }
+  );
+}
+
+  createHotel(data: any): Observable<any> {
     return this.http.post(this.apiUrl, data, 
       { withCredentials: true }
     );
   }
-   // Update hotel (owner/admin)
-  updateHotel(id: string, data: any) {
+
+  updateHotel(id: string, data: any): Observable<any> {
     return this.http.patch(`${this.apiUrl}/${id}`, data, 
       { withCredentials: true }
     );
   }
 
-  // Delete hotel (owner/admin)
-  deleteHotel(id: string) {
+  deleteHotel(id: string): Observable<any> {
     return this.http.delete(`${this.apiUrl}/${id}`, 
       { withCredentials: true }
     );
   }
-   // Get rooms of a hotel
-  getRooms(hotelId: string) {
+
+  getRooms(hotelId: string): Observable<any> {
     return this.http.get(`http://localhost:3000/api/Room/${hotelId}`, 
       { withCredentials: true }
-    )
-}
+    );
+  }
 }

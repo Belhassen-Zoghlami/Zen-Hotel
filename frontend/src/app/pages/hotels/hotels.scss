@@ -1,0 +1,131 @@
+.hotels-wrapper {
+  padding: 3rem 0;
+  min-height: calc(100vh - 140px);
+}
+
+.hotels-header {
+  margin-bottom: 2rem;
+  h2 { font-size: 2rem; color: var(--zen-text-primary); }
+  p { color: var(--zen-text-secondary); }
+}
+
+.gold { color: var(--zen-gold); }
+
+.filters-bar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+
+  .zen-input {
+    background: var(--zen-bg-secondary);
+    border: 1px solid var(--zen-border);
+    color: var(--zen-text-primary);
+    border-radius: 8px;
+    padding: 0.7rem 1rem;
+    font-size: 0.9rem;
+    flex: 1;
+    min-width: 200px;
+
+    &:focus {
+      outline: none;
+      border-color: var(--zen-gold);
+    }
+
+    &::placeholder { color: var(--zen-text-muted); }
+
+    option {
+      background: var(--zen-bg-secondary);
+      color: var(--zen-text-primary);
+    }
+  }
+}
+
+.hotel-card {
+  background: var(--zen-bg-card);
+  border: 1px solid var(--zen-border);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+
+  &:hover {
+    transform: translateY(-4px);
+    border-color: var(--zen-gold);
+  }
+
+  .card-img {
+    height: 180px;
+    background: linear-gradient(135deg, #1e293b, #334155);
+    display: flex;
+    align-items: flex-end;
+    padding: 1rem;
+  }
+
+  .card-badge {
+    background: var(--zen-gold);
+    color: var(--zen-bg-primary);
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+
+  .card-body {
+    padding: 1.2rem;
+
+    h3 {
+      color: var(--zen-text-primary);
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .location {
+      color: var(--zen-text-secondary);
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+      i { color: var(--zen-gold); margin-right: 4px; }
+    }
+
+    .description {
+      color: var(--zen-text-muted);
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .btn-view {
+      background: transparent;
+      border: 1px solid var(--zen-gold);
+      color: var(--zen-gold);
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+
+      &:hover {
+        background: var(--zen-gold);
+        color: var(--zen-bg-primary);
+      }
+    }
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem;
+
+  i {
+    font-size: 3rem;
+    color: var(--zen-text-muted);
+    display: block;
+    margin-bottom: 1rem;
+  }
+
+  p { color: var(--zen-text-secondary); }
+}
