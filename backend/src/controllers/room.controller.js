@@ -21,7 +21,7 @@ exports.CreateRoom = async(req,res) =>
                     roomNumber: req.body.roomNumber,
                     type: req.body.type,
                     capacity: req.body.capacity,
-                    pricePerNight: Number(req.body.pricePerNight),
+                    pricePerNight: mongoose.Types.Decimal128.fromString(req.body.pricePerNight.toString()),
                     amenities: req.body.amenities,
                     description: req.body.description,
                     isAvailable: req.body.isAvailable,

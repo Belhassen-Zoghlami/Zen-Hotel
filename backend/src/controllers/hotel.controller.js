@@ -36,7 +36,6 @@ exports.GetAllHotels = async (req,res)=>
 {
     try
     {
-        //gettin per search criterias 
         const query = {};
         if(req.query.city)
             query.location = { $regex: req.query.city, $options: 'i'};
@@ -44,25 +43,23 @@ exports.GetAllHotels = async (req,res)=>
             query.rating = {$regex: req.query.rating[0], $options: 'i'};
 
         let hotels;
-        if (!req.user || !['admin','owner'].includes(req.user.role))
-            hotels = await Hotel.find(query).select("-owner -createdAt -updatedAt -__v");
+        if (req.user && req.user.role === 'owner')
+            hotels = await Hotel.find({ ...query, owner: req.user.id })
+                .populate('owner','name email');
         else
-            hotels = await Hotel.find({ owner : req.user.id }).populate('owner','name email');
-            
+            hotels = await Hotel.find(query)
+                .select("-owner -createdAt -updatedAt -__v");
             
         if (!hotels)
-            {
-                return res.status(404).json({ message: 'no hotels found for this user'});
-            }
+            return res.status(404).json({ message: 'no hotels found'});
+            
         res.json(hotels);
-
-
-    }catch(err)
+    }
+    catch(err)
     {
-        res.status(500).json({ message: 'Error finding hotels',error: err.message})
+        res.status(500).json({ message: 'Error finding hotels', error: err.message})
     }
 };
-
 //                                                                  find by id
 exports.GetHotel = async (req,res) =>
 {
