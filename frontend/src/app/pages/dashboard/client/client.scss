@@ -1,0 +1,144 @@
+.dashboard-wrapper {
+  padding: 3rem 0;
+  min-height: calc(100vh - 140px);
+}
+
+.dashboard-header {
+  margin-bottom: 2rem;
+  h2 { font-size: 2rem; color: var(--zen-text-primary); }
+  p { color: var(--zen-text-secondary); }
+}
+
+.gold { color: var(--zen-gold); }
+
+.stat-card {
+  background: var(--zen-bg-card);
+  border: 1px solid var(--zen-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  i {
+    font-size: 2rem;
+    color: var(--zen-gold);
+  }
+
+  .stat-number {
+    display: block;
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--zen-text-primary);
+  }
+
+  .stat-label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--zen-text-secondary);
+  }
+}
+
+.section-card {
+  background: var(--zen-bg-card);
+  border: 1px solid var(--zen-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+
+  h3 {
+    color: var(--zen-text-primary);
+    font-size: 1.2rem;
+    margin-bottom: 1.5rem;
+  }
+}
+
+.zen-table {
+  color: var(--zen-text-primary);
+
+  thead tr {
+    border-bottom: 1px solid var(--zen-border);
+    th {
+      color: var(--zen-text-secondary);
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 0.75rem;
+    }
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--zen-border);
+    transition: background 0.2s;
+
+    &:hover { background: var(--zen-bg-secondary); }
+
+    td { padding: 0.75rem; font-size: 0.9rem; }
+  }
+}
+
+.badge-status {
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+
+  &.pending {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--zen-warning);
+  }
+  &.confirmed {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--zen-success);
+  }
+  &.cancelled {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--zen-danger);
+  }
+}
+
+.btn-cancel {
+  background: transparent;
+  border: 1px solid var(--zen-danger);
+  color: var(--zen-danger);
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: var(--zen-danger);
+    color: white;
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+
+  i {
+    font-size: 3rem;
+    color: var(--zen-text-muted);
+    display: block;
+    margin-bottom: 1rem;
+  }
+
+  p {
+    color: var(--zen-text-secondary);
+    margin-bottom: 1rem;
+  }
+}
+
+.btn-gold-outline {
+  border: 1px solid var(--zen-gold);
+  color: var(--zen-gold);
+  padding: 0.5rem 1.5rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+
+  &:hover {
+    background: var(--zen-gold);
+    color: var(--zen-bg-primary);
+  }
+}

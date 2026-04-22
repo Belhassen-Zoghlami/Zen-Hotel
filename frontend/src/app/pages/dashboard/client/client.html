@@ -1,0 +1,96 @@
+<div class="dashboard-wrapper">
+  <div class="container">
+    <!-- Header -->
+    <div class="dashboard-header">
+      <h2>My <span class="gold">Dashboard</span></h2>
+      <p>Manage your bookings and preferences</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="stat-card">
+          <i class="pi pi-calendar"></i>
+          <div>
+            <span class="stat-number">{{ bookings.length }}</span>
+            <span class="stat-label">Total Bookings</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="stat-card">
+          <i class="pi pi-check-circle"></i>
+          <div>
+            <span class="stat-number">
+              {{ confirmedCount }}
+            </span>
+            <span class="stat-label">Confirmed</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="stat-card">
+          <i class="pi pi-clock"></i>
+          <div>
+            <span class="stat-number">
+              {{ pendingCount }}
+            </span>
+            <span class="stat-label">Pending</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bookings List -->
+    <div class="section-card">
+      <h3>My Bookings</h3>
+
+      @if (bookings.length === 0) {
+        <div class="empty-state">
+          <i class="pi pi-calendar-times"></i>
+          <p>No bookings yet</p>
+          <a routerLink="/hotels" class="btn-gold-outline">Explore Hotels</a>
+        </div>
+      } @else {
+        <div class="table-responsive">
+          <table class="table zen-table">
+            <thead>
+              <tr>
+                <th>Hotel</th>
+                <th>Room</th>
+                <th>Check In</th>
+                <th>Check Out</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (booking of bookings; track booking._id) {
+                <tr>
+                  <td>{{ booking.hotel?.name }}</td>
+                  <td>{{ booking.room?.roomNumber }} - {{ booking.room?.type }}</td>
+                  <td>{{ booking.checkIn | date: 'mediumDate' }}</td>
+                  <td>{{ booking.checkOut | date: 'mediumDate' }}</td>
+                  <td class="gold">${{ booking.totalPrice }}</td>
+                  <td>
+                    <span class="badge-status {{ booking.status }}">
+                      {{ booking.status }}
+                    </span>
+                  </td>
+                  <td>
+                    @if (booking.status !== 'cancelled') {
+                      <button class="btn-cancel" (click)="cancelBooking(booking._id)">
+                        Cancel
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </div>
+</div>
