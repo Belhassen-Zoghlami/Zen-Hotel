@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const cookieP = require('cookie-parser');
 const authRoutes = require('./routes/auth.routes');
@@ -17,6 +18,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(cookieP());
+app.use('/images', express.static(path.join(__dirname, '..', 'images')));
 
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api/auth',authRoutes);

@@ -53,4 +53,24 @@ onFilter(): void {
   goToHotel(id: string): void {
     this.router.navigate(['/hotels', id]);
   }
-}
+  getImageUrl(storedPath?: string | { path?: string; url?: string }): string {
+    if (!storedPath) {
+      return '';
+    }
+
+    const pathValue = typeof storedPath === 'string'
+      ? storedPath
+      : storedPath.url || storedPath.path || '';
+
+    if (!pathValue) {
+      return '';
+    }
+
+    const normalized = pathValue.replace(/\\/g, '/').trim();
+    if (/^https?:\/\//i.test(normalized)) {
+      return normalized;
+    }
+
+    const trimmed = normalized.replace(/^\/+/, '').replace(/^images\//i, '');
+    return `http://localhost:3000/images/${trimmed}`;
+  }}

@@ -1,5 +1,6 @@
-
 const Hotel = require('../models/hotel.model');
+const mongoose = require('mongoose');
+const path = require('path');
 
 //                                                                  hotel creation
 exports.CreateHoltel = async (req,res)=>
@@ -7,7 +8,12 @@ exports.CreateHoltel = async (req,res)=>
     try
     {
         const imagePaths = req.files 
-        ? req.files.map(file => file.path)
+        ? req.files.map(file => {
+            // Store only "hotel/filename.jpg" — relative to the /images/ static root
+            const normalized = file.path.replace(/\\/g, '/');
+            const idx = normalized.indexOf('/images/');
+            return idx !== -1 ? normalized.slice(idx + '/images/'.length) : path.basename(file.path);
+        })
         : [];
 
         const hotel = await Hotel.create

@@ -4,7 +4,11 @@
     @if (hotel) {
       <!-- Hotel Info -->
       <div class="hotel-hero">
-        <div class="hotel-img"></div>
+        <div class="hotel-img"
+          [style.backgroundImage]="hotel.images?.length ? 'url(' + getImageUrl(hotel.images[0]) + ')' : 'none'"
+          [style.backgroundSize]="'cover'"
+          [style.backgroundPosition]="'center'">
+        </div>
         <div class="hotel-info">
           <span class="rating-badge">{{ hotel.rating }} ★</span>
           <h1>{{ hotel.name }}</h1>

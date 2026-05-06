@@ -60,7 +60,7 @@ exports.UpdateRoom = async (req,res)=>
     try 
     {
 
-        const room = await Room.find({hotel:req.params.hotelId}).findById(req.params.roomId);
+        const room = await Room.findOne({hotel: req.params.hotelId, _id: req.params.roomId});
         if (!room)
             return res.status(404).json({ message: 'cant update, Room not found'});
         room.roomNumber= req.body.roomNumber || room.roomNumber;
@@ -86,7 +86,7 @@ exports.GetRoom = async (req,res) =>
 {
     try
     {
-        const room = await Room.find({hotel:req.params.hotelId}).findById(req.params.roomId);
+        const room = await Room.findOne({hotel:req.params.hotelId, _id: req.params.roomId});
         if(!room)
         {
 
@@ -107,7 +107,7 @@ exports.DeleteRoom = async (req,res) =>
 {
     try
     {
-        const room = await Room.find({hotel:req.params.hotelId}).findById(req.params.roomId);
+        const room = await Room.findOne({hotel:req.params.hotelId, _id: req.params.roomId});
         if (!room)
         {
             return res.status(404).json({message: 'cant delete, Room not found'});
