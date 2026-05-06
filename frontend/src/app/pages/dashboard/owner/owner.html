@@ -39,7 +39,7 @@
     </div>
 
     <div class="dashboard-add-row mb-4">
-      <button type="button" class="btn-add-hotel" [class.cancel]="showAddHotelForm" (click)="toggleHotelForm()">
+      <button class="btn-add-hotel" [class.cancel]="showAddHotelForm" (click)="toggleHotelForm()">
         <i class="pi" [class.pi-times]="showAddHotelForm" [class.pi-plus]="!showAddHotelForm"></i>
         {{ showAddHotelForm ? 'Cancel' : 'Add New Hotel' }}
       </button>
@@ -64,11 +64,11 @@
               <label class="form-label">Rating</label>
               <select class="zen-input w-100" [(ngModel)]="newHotel.rating">
                 <option value="">Select rating</option>
-                <option value="1">1 Star</option>
-                <option value="2">2 Stars</option>
-                <option value="3">3 Stars</option>
-                <option value="4">4 Stars</option>
-                <option value="5">5 Stars</option>
+                <option value="1 star">1 Star</option>
+                <option value="2 stars">2 Stars</option>
+                <option value="3 stars">3 Stars</option>
+                <option value="4 stars">4 Stars</option>
+                <option value="5 stars">5 Stars</option>
               </select>
             </div>
             <div class="col-12">
@@ -80,7 +80,7 @@
               <input class="zen-input w-100" type="file" multiple (change)="onHotelImagesChange($event)" accept="image/*" />
             </div>
             <div class="col-12 hotel-form-actions">
-              <button type="button" class="btn-confirm" (click)="createHotel()" [disabled]="isCreatingHotel">
+              <button class="btn-confirm" (click)="createHotel()" [disabled]="isCreatingHotel">
                 {{ isCreatingHotel ? 'Creating...' : 'Create Hotel' }}
               </button>
             </div>
@@ -107,16 +107,20 @@
         <div class="hotels-list">
           @for (hotel of hotels; track hotel._id) {
             <div class="hotel-item"
-              [class.active]="hotel._id === selectedHotelId"
-              (click)="loadBookings(hotel._id)">
-              <div>
+              [class.active]="hotel._id === selectedHotelId">
+              <div (click)="loadBookings(hotel._id)">
                 <span class="hotel-name">{{ hotel.name }}</span>
                 <span class="hotel-location">
                   <i class="pi pi-map-marker"></i>
                   {{ hotel.location }}
                 </span>
               </div>
-              <span class="rating-badge">{{ hotel.rating }} ★</span>
+              <div class="hotel-actions">
+                <span class="rating-badge">{{ hotel.rating }} ★</span>
+                <button class="btn-delete" (click)="deleteHotel(hotel._id)" title="Delete Hotel">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
             </div>
           }
         </div>
