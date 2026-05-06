@@ -19,12 +19,11 @@ const hotelSchema = new mongoose.Schema
             type: String, // 1 star, 4.5 stars etc ..for now string but posed to be float/double or wv
             required: true
         },
-        images: [
-            {
-                type:String,
-                required:true
-            }
-        ],
+        images:
+        {
+            type: [String],
+            default: []
+        },
         description:
         {
             type:String

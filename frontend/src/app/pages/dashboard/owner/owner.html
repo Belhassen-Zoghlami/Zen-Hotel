@@ -117,6 +117,9 @@
               </div>
               <div class="hotel-actions">
                 <span class="rating-badge">{{ hotel.rating }} ★</span>
+                <button class="btn-secondary" (click)="manageRooms(hotel._id)" title="Manage Rooms">
+                  <i class="pi pi-fw pi-list"></i>
+                </button>
                 <button class="btn-delete" (click)="deleteHotel(hotel._id)" title="Delete Hotel">
                   <i class="pi pi-trash"></i>
                 </button>
