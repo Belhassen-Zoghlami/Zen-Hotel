@@ -6,8 +6,9 @@ exports.register = async (req, res) => {
 
   try 
   {
-
-    const { name, email, password, role } = req.body;
+    const allowed = ['client', 'owner'];
+    const { name, email, password} = req.body;
+    let role = allowed.includes(req.body.role) ? req.body.role : 'client';
 
     const exists = await User.findOne({ email });
     if (exists) {
@@ -62,7 +63,7 @@ exports.login = async (req, res) => {
     }
     if (!user.isActive)
     {
-      res.status(403).json({message: 'Account suspended'});
+      return res.status(403).json({message: 'Account suspended'});
     }
     if ( user.role === 'owner' && !user.isValidated)
 
@@ -98,7 +99,7 @@ exports.login = async (req, res) => {
       }
     );
 
-    res.json({message: `user ${user.name} logged in successfully`});
+    return res.json({token,user: { id: user._id, name: user.name, role: user.role}});
 
   }
   catch (err)

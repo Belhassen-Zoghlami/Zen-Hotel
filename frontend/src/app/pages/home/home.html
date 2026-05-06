@@ -10,17 +10,17 @@
       <div class="search-bar">
         <div class="search-field">
           <i class="pi pi-map-marker"></i>
-          <input type="text" placeholder="Where are you going?"/>
+          <input type="text" placeholder="Where are you going?" [(ngModel)]="searchCity" />
         </div>
         <div class="search-field">
           <i class="pi pi-calendar"></i>
-          <input type="date"/>
+          <input type="date" [(ngModel)]="searchCheckIn" [min]="today" />
         </div>
         <div class="search-field">
           <i class="pi pi-calendar"></i>
-          <input type="date"/>
+          <input type="date" [(ngModel)]="searchCheckOut" [min]="searchCheckIn || today" />
         </div>
-        <button class="btn-search">
+        <button class="btn-search" (click)="onSearch()">
           <i class="pi pi-search"></i>
           Search
         </button>
@@ -34,79 +34,66 @@
   <div class="container">
     <div class="section-header">
       <h2>Featured <span class="gold">Hotels</span></h2>
-      <a href="#" class="see-all">See all →</a>
+      <a routerLink="/hotels" class="see-all">See all →</a>
     </div>
 
-    <div class="row g-4">
-      <!-- Card 1 -->
-      <div class="col-md-4">
-        <div class="hotel-card">
-          <div class="card-img">
-            <span class="card-badge">★ 4.9</span>
-          </div>
-          <div class="card-body">
-            <h3>Grand Palace Hotel</h3>
-            <p class="location">
-              <i class="pi pi-map-marker"></i> Paris, France
-            </p>
-            <div class="card-footer-row">
-              <span class="price">$320 <small>/ night</small></span>
-              <button class="btn-book">Book Now</button>
+    @if (isLoading) {
+      <div class="loading-row">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+      </div>
+    } @else if (featuredHotels.length === 0) {
+      <div class="empty-state">
+        <i class="pi pi-building"></i>
+        <p>No hotels available yet. Check back soon!</p>
+      </div>
+    } @else {
+      <div class="row g-4">
+        @for (hotel of featuredHotels; track hotel._id) {
+          <div class="col-md-4">
+            <div class="hotel-card" (click)="goToHotel(hotel._id)">
+              <div class="card-img"
+                [style.backgroundImage]="hotel.images?.length ? 'url(' + getImageUrl(hotel.images[0]) + ')' : 'none'"
+                [style.backgroundSize]="'cover'"
+                [style.backgroundPosition]="'center'">
+                <span class="card-badge">★ {{ hotel.rating }}</span>
+              </div>
+              <div class="card-body">
+                <h3>{{ hotel.name }}</h3>
+                <p class="location">
+                  <i class="pi pi-map-marker"></i> {{ hotel.location }}
+                </p>
+                <div class="card-footer-row">
+                  <span class="price">View Rooms</span>
+                  <button class="btn-book">Book Now</button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        }
       </div>
-
-      <!-- Card 2 -->
-      <div class="col-md-4">
-        <div class="hotel-card">
-          <div class="card-img">
-            <span class="card-badge">★ 4.7</span>
-          </div>
-          <div class="card-body">
-            <h3>Sea View Resort</h3>
-            <p class="location">
-              <i class="pi pi-map-marker"></i> Barcelona, Spain
-            </p>
-            <div class="card-footer-row">
-              <span class="price">$180 <small>/ night</small></span>
-              <button class="btn-book">Book Now</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Card 3 -->
-      <div class="col-md-4">
-        <div class="hotel-card">
-          <div class="card-img">
-            <span class="card-badge">★ 4.8</span>
-          </div>
-          <div class="card-body">
-            <h3>Riad Al Karam</h3>
-            <p class="location">
-              <i class="pi pi-map-marker"></i> Marrakech, Morocco
-            </p>
-            <div class="card-footer-row">
-              <span class="price">$95 <small>/ night</small></span>
-              <button class="btn-book">Book Now</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    }
   </div>
 </section>
 
-<!-- AI Suggestions (Sprint 4) -->
+<!-- AI Suggestions -->
 <section class="ai-section">
   <div class="container">
     <div class="ai-banner">
       <div>
         <h3>✨ Personalized for You</h3>
-        <p>Login to get AI-powered hotel recommendations based on your preferences</p>
+        @if (currentUser$ | async) {
+          <p>Get AI-powered recommendations based on your booking history</p>
+        } @else {
+          <p>Login to get AI-powered hotel recommendations based on your preferences</p>
+        }
       </div>
-      <button class="btn-gold-outline">Get Started</button>
+      @if (currentUser$ | async) {
+        <button class="btn-gold-outline">Get Recommendations</button>
+      } @else {
+        <a routerLink="/login" class="btn-gold-outline">Get Started</a>
+      }
     </div>
   </div>
 </section>

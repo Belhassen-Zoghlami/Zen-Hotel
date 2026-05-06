@@ -36,7 +36,10 @@
         @for (hotel of hotels; track hotel._id) {
           <div class="col-md-4">
             <div class="hotel-card" (click)="goToHotel(hotel._id)">
-              <div class="card-img">
+              <div class="card-img"
+                [style.backgroundImage]="hotel.images?.length ? 'url(' + getImageUrl(hotel.images[0]) + ')' : 'none'"
+                [style.backgroundSize]="'cover'"
+                [style.backgroundPosition]="'center'">
                 <span class="card-badge">{{ hotel.rating }} ★</span>
               </div>
               <div class="card-body">
