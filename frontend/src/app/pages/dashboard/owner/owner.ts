@@ -132,6 +132,28 @@ export class Owner implements OnInit {
     });
   }
 
+  deleteHotel(hotelId: string): void {
+    if (confirm('Are you sure you want to delete this hotel? This will also delete all associated rooms.')) {
+      this.hotelService.deleteHotel(hotelId).subscribe({
+        next: () => {
+          this.hotels = this.hotels.filter(h => h._id !== hotelId);
+          if (this.selectedHotelId === hotelId) {
+            this.selectedHotelId = this.hotels.length > 0 ? this.hotels[0]._id : '';
+            this.bookings = [];
+            if (this.selectedHotelId) {
+              this.loadBookings(this.selectedHotelId);
+            }
+          }
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error deleting hotel:', err);
+          alert('Failed to delete hotel. Please try again.');
+        }
+      });
+    }
+  }
+
   get confirmedCount(): number {
     return this.bookings.filter(b => b.status === 'confirmed').length;
   }

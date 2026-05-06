@@ -1,4 +1,5 @@
 const Hotel = require('../models/hotel.model');
+const Room = require('../models/room.model');
 const mongoose = require('mongoose');
 const path = require('path');
 
@@ -23,7 +24,7 @@ exports.CreateHoltel = async (req,res)=>
             images: imagePaths,
             rating: req.body.rating,
             description: req.body.description,
-            owner: mongoose.Types.ObjectId(req.user.id)
+            owner: req.user.id
         });
         res.status(201).json({hotel});
     }
@@ -32,6 +33,7 @@ exports.CreateHoltel = async (req,res)=>
     {
 
         res.status(500).json({ message: 'Error creating hotel',error: err.message});
+        console.error('Error creating hotel:', err);
     }
 
 
@@ -142,9 +144,12 @@ exports.DeleteHotel = async(req,res) =>
             return res.status(403).json({message: 'Access unauthorized'});
         }
 
+        // Delete all rooms associated with this hotel
+        await Room.deleteMany({ hotel: req.params.id });
+
         await hotel.deleteOne();
 
-        res.json({message : 'hotel deleted successfully'});
+        res.json({message : 'hotel and associated rooms deleted successfully'});
     }
         catch(err)
     {
