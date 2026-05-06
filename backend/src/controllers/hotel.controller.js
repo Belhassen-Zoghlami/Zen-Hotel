@@ -1,7 +1,30 @@
+const fs = require('fs').promises;
 const Hotel = require('../models/hotel.model');
 const Room = require('../models/room.model');
 const mongoose = require('mongoose');
 const path = require('path');
+
+const IMAGE_ROOT = path.resolve(__dirname, '../../images');
+
+async function deleteImagesFromDisk(imagePaths) {
+    const paths = imagePaths
+        ? (Array.isArray(imagePaths) ? imagePaths : [imagePaths])
+        : [];
+
+    await Promise.allSettled(paths.map(async (relativePath) => {
+        if (!relativePath) return;
+        const normalized = relativePath.replace(/\\/g, '/');
+        const targetPath = path.resolve(IMAGE_ROOT, normalized);
+        if (!targetPath.startsWith(IMAGE_ROOT)) return;
+        try {
+            await fs.unlink(targetPath);
+        } catch (err) {
+            if (err.code !== 'ENOENT') {
+                console.error('Failed to remove hotel image:', targetPath, err);
+            }
+        }
+    }));
+}
 
 //                                                                  hotel creation
 exports.CreateHoltel = async (req,res)=>
@@ -144,6 +167,9 @@ exports.DeleteHotel = async(req,res) =>
             return res.status(403).json({message: 'Access unauthorized'});
         }
 
+        // Remove hotel images from disk before deleting the hotel
+        await deleteImagesFromDisk(hotel.images);
+
         // Delete all rooms associated with this hotel
         await Room.deleteMany({ hotel: req.params.id });
 
@@ -155,5 +181,6 @@ exports.DeleteHotel = async(req,res) =>
     {
 
             res.status(500).json({message: 'Server error'});
+            console.error('Error deleting hotel:', err);
     }
     }

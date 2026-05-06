@@ -19,6 +19,12 @@ export const routes: Routes = [
       path: 'hotels/:id',
       loadComponent: () => import('./pages/hotel-detail/hotel-detail').then(m => m.HotelDetail)
     },
+    {
+      path: 'hotels/:id/rooms',
+      loadComponent: () => import('./pages/rooms/rooms').then(m => m.Rooms),
+      canActivate: [authGuard, roleGuard],
+      data: { roles: ['owner'] }
+    },
 
     { path: 'dashboard/admin',
       loadComponent: () => import('./pages/dashboard/admin/admin').then(m => m.Admin),

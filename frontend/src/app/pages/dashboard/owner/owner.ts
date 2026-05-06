@@ -2,6 +2,7 @@ import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HotelService } from '../../../core/services/hotel';
 import { BookingService } from '../../../core/services/booking';
+import { Router } from '@angular/router';
 import { DatePipe } from '@angular/common';
 
 @Component({
@@ -14,6 +15,7 @@ export class Owner implements OnInit {
 
   private hotelService = inject(HotelService);
   private bookingService = inject(BookingService);
+  private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
 
   hotels: any[] = [];
@@ -152,6 +154,10 @@ export class Owner implements OnInit {
         }
       });
     }
+  }
+
+  manageRooms(hotelId: string): void {
+    this.router.navigate(['/hotels', hotelId, 'rooms']);
   }
 
   get confirmedCount(): number {

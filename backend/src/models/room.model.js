@@ -11,13 +11,11 @@ const roomSchema = new mongoose.Schema
             required: true
         },
         images:
-        [
-            {
-                type:String,
-                required:true
-            }
-        ]
-        ,roomNumber:
+        {
+            type: [String],
+            default: []
+        },
+        roomNumber:
         {
             type:String,
             required: true
@@ -64,7 +62,7 @@ const roomSchema = new mongoose.Schema
 
         }]
         ,
-        desciption:
+        description:
         {
 
             type: String,

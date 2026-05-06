@@ -31,7 +31,7 @@ const optAuth = require('../middleware/OptAuth.middleware');
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
@@ -65,6 +65,12 @@ const optAuth = require('../middleware/OptAuth.middleware');
  *               isAvailable:
  *                 type: boolean
  *                 example: true
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: Room images
  *     responses:
  *       200:
  *         description: Room created successfully
@@ -78,7 +84,7 @@ router.post('/:hotelId',auth,reqRoles('owner','admin'),upload.array("images",5),
 //get room by id route
 router.get('/:hotelId/:roomId',auth,roomController.GetRoom);
 //update room route
-router.patch('/:hotelId/:roomId',auth,reqRoles('owner','admin'),roomController.UpdateRoom);
+router.patch('/:hotelId/:roomId',auth,reqRoles('owner','admin'),upload.array("images",5),roomController.UpdateRoom);
 //delete room route
 router.delete('/:hotelId/:roomId',auth, reqRoles('owner','admin'), roomController.DeleteRoom);
 
