@@ -85,29 +85,92 @@
 }
 
 .hotel-form-card {
-  border-color: rgba(201, 168, 76, 0.3);
+  background: var(--zen-bg-card);
+  border: 1px solid var(--zen-border);
+  border-radius: 12px;
+  padding: 1.75rem;
+  margin-bottom: 2rem;
 }
 
 .hotel-form {
-  padding-top: 0.5rem;
-}
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
 
-.hotel-form .form-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: var(--zen-text-secondary);
-  font-size: 0.9rem;
-}
+  .col-md-4 {
+    flex: 1 1 calc(33.333% - 1rem);
+    min-width: 200px;
+  }
 
-.hotel-form-actions {
-  display: flex;
-  justify-content: flex-end;
-}
+  .col-12 {
+    flex: 1 1 100%;
+  }
 
-.form-error {
-  color: var(--zen-danger);
-  font-size: 0.9rem;
-  margin-top: 0.75rem;
+  .form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--zen-text-secondary);
+    font-size: 0.9rem;
+  }
+
+  .zen-input {
+    background: var(--zen-bg-secondary);
+    border: 1px solid var(--zen-text-secondary);
+    color: var(--zen-text-primary);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    width: 100%;
+
+    &:focus {
+      outline: none;
+      border-color: var(--zen-gold);
+    }
+
+    &::placeholder {
+      color: var(--zen-text-muted);
+    }
+
+    option {
+      background: var(--zen-bg-secondary);
+      color: var(--zen-text-primary);
+    }
+  }
+
+  .hotel-form-actions {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .btn-confirm {
+    background: transparent;
+    border: 1px solid var(--zen-gold);
+    color: var(--zen-gold);
+    padding: 0.65rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: var(--zen-gold);
+      color: var(--zen-bg-primary);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  .form-error {
+    color: var(--zen-danger);
+    font-size: 0.9rem;
+    margin-top: 0.75rem;
+  }
 }
 
 .hotels-list {
@@ -269,4 +332,22 @@
   }
 
   p { color: var(--zen-text-secondary); }
+}
+
+.btn-rooms {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: 1px solid var(--zen-success);
+  color: var(--zen-success);
+  padding: 0.3rem 0.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+    &:hover {
+    background: var(--zen-success);
+    color: white;
+  }
 }
