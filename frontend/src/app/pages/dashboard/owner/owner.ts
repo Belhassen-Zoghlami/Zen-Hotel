@@ -1,11 +1,12 @@
 import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { HotelService } from '../../../core/services/hotel';
 import { BookingService } from '../../../core/services/booking';
 import { DatePipe } from '@angular/common';
 
 @Component({
   selector: 'app-owner',
-  imports: [DatePipe],
+  imports: [DatePipe, FormsModule],
   templateUrl: './owner.html',
   styleUrl: './owner.scss',
 })
@@ -18,6 +19,18 @@ export class Owner implements OnInit {
   hotels: any[] = [];
   bookings: any[] = [];
   selectedHotelId: string = '';
+
+  newHotel = {
+    name: '',
+    location: '',
+    rating: '',
+    description: '',
+    images: [] as File[],
+  };
+
+  isCreatingHotel = false;
+  hotelCreateError = '';
+  showAddHotelForm = false;
 
   ngOnInit(): void {
     this.hotelService.getHotels().subscribe({
@@ -64,6 +77,58 @@ export class Owner implements OnInit {
         this.cdr.detectChanges();
       },
       error: (err) => console.log(err)
+    });
+  }
+
+  onHotelImagesChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files) {
+      this.newHotel.images = [];
+      return;
+    }
+    this.newHotel.images = Array.from(input.files);
+  }
+
+  toggleHotelForm(): void {
+    this.showAddHotelForm = !this.showAddHotelForm;
+    this.hotelCreateError = '';
+  }
+
+  createHotel(): void {
+    this.hotelCreateError = '';
+    if (!this.newHotel.name || !this.newHotel.location || !this.newHotel.rating) {
+      this.hotelCreateError = 'Name, location and rating are required.';
+      return;
+    }
+
+    this.isCreatingHotel = true;
+    const formData = new FormData();
+    formData.append('name', this.newHotel.name);
+    formData.append('location', this.newHotel.location);
+    formData.append('rating', this.newHotel.rating);
+    formData.append('description', this.newHotel.description || '');
+    this.newHotel.images.forEach(file => formData.append('images', file));
+
+    this.hotelService.createHotel(formData).subscribe({
+      next: (res: any) => {
+        const hotel = res?.hotel ?? res;
+        if (hotel) {
+          this.hotels.unshift(hotel);
+          this.selectedHotelId = hotel._id;
+          this.loadBookings(hotel._id);
+        }
+        this.newHotel = { name: '', location: '', rating: '', description: '', images: [] };
+        this.showAddHotelForm = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error(err);
+        this.hotelCreateError = 'Unable to create hotel. Please check the fields and try again.';
+        this.cdr.detectChanges();
+      },
+      complete: () => {
+        this.isCreatingHotel = false;
+      }
     });
   }
 

@@ -49,6 +49,67 @@
   }
 }
 
+.dashboard-add-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.btn-add-hotel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: 1px solid var(--zen-gold);
+  color: var(--zen-gold);
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-add-hotel:hover {
+  background: var(--zen-gold);
+  color: var(--zen-bg-primary);
+}
+
+.btn-add-hotel.cancel {
+  border-color: var(--zen-danger);
+  color: var(--zen-danger);
+}
+
+.btn-add-hotel.cancel:hover {
+  background: var(--zen-danger);
+  color: var(--zen-bg-primary);
+}
+
+.hotel-form-card {
+  border-color: rgba(201, 168, 76, 0.3);
+}
+
+.hotel-form {
+  padding-top: 0.5rem;
+}
+
+.hotel-form .form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--zen-text-secondary);
+  font-size: 0.9rem;
+}
+
+.hotel-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.form-error {
+  color: var(--zen-danger);
+  font-size: 0.9rem;
+  margin-top: 0.75rem;
+}
+
 .hotels-list {
   display: flex;
   flex-direction: column;
