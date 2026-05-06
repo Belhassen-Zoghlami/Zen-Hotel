@@ -38,6 +38,62 @@
       </div>
     </div>
 
+    <div class="dashboard-add-row mb-4">
+      <button type="button" class="btn-add-hotel" [class.cancel]="showAddHotelForm" (click)="toggleHotelForm()">
+        <i class="pi" [class.pi-times]="showAddHotelForm" [class.pi-plus]="!showAddHotelForm"></i>
+        {{ showAddHotelForm ? 'Cancel' : 'Add New Hotel' }}
+      </button>
+    </div>
+
+    @if (showAddHotelForm) {
+      <div class="section-card mb-4 hotel-form-card">
+        <div class="section-header">
+          <h3>Create a New Hotel</h3>
+        </div>
+        <div class="hotel-form">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Hotel Name</label>
+              <input class="zen-input w-100" type="text" [(ngModel)]="newHotel.name" placeholder="Hotel name" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">City / Location</label>
+              <input class="zen-input w-100" type="text" [(ngModel)]="newHotel.location" placeholder="City or neighborhood" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Rating</label>
+              <select class="zen-input w-100" [(ngModel)]="newHotel.rating">
+                <option value="">Select rating</option>
+                <option value="1">1 Star</option>
+                <option value="2">2 Stars</option>
+                <option value="3">3 Stars</option>
+                <option value="4">4 Stars</option>
+                <option value="5">5 Stars</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea class="zen-input w-100" rows="3" [(ngModel)]="newHotel.description" placeholder="Brief hotel description"></textarea>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Hotel Images</label>
+              <input class="zen-input w-100" type="file" multiple (change)="onHotelImagesChange($event)" accept="image/*" />
+            </div>
+            <div class="col-12 hotel-form-actions">
+              <button type="button" class="btn-confirm" (click)="createHotel()" [disabled]="isCreatingHotel">
+                {{ isCreatingHotel ? 'Creating...' : 'Create Hotel' }}
+              </button>
+            </div>
+            @if (hotelCreateError) {
+              <div class="col-12">
+                <p class="form-error">{{ hotelCreateError }}</p>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
     <!-- My Hotels -->
     <div class="section-card mb-4">
       <h3>My Hotels</h3>
