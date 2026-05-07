@@ -102,9 +102,17 @@
                   <div class="room-item">
                     <div class="room-top">
                       <span class="room-label">#{{ room.roomNumber }}</span>
-                      <span class="room-badge {{ room.isAvailable ? 'available' : 'unavailable' }}">
-                        {{ room.isAvailable ? 'Available' : 'Unavailable' }}
-                      </span>
+                      <div class="room-actions">
+                        <span class="room-badge {{ room.isAvailable ? 'available' : 'unavailable' }}">
+                          {{ room.isAvailable ? 'Available' : 'Unavailable' }}
+                        </span>
+                        <button class="btn-secondary" (click)="startEditRoom(room)" title="Edit Room">
+                          <i class="pi pi-fw pi-pencil"></i>
+                        </button>
+                        <button class="btn-delete" (click)="deleteRoom(room._id)" title="Delete Room">
+                          <i class="pi pi-fw pi-trash"></i>
+                        </button>
+                      </div>
                     </div>
                     <div class="room-meta">
                       <span>{{ room.type }} • {{ room.capacity }} guests</span>
@@ -132,7 +140,78 @@
           </div>
         </div>
       </div>
-    } @else {
+
+      <!-- Edit Room Modal -->
+      @if (editingRoomId && hotel) {
+        <div class="section-card mt-4">
+          <div class="section-header">
+            <h3>Edit Room #{{ editRoom.roomNumber }}</h3>
+            <button class="btn-close" (click)="cancelEditRoom()">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+          <div class="room-form">
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label">Room Number</label>
+                <input class="zen-input w-100" type="text" [(ngModel)]="editRoom.roomNumber" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Type</label>
+                <select class="zen-input w-100" [(ngModel)]="editRoom.type">
+                  @for (type of roomTypes; track type) {
+                    <option [value]="type">{{ type }}</option>
+                  }
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Capacity</label>
+                <input class="zen-input w-100" type="number" min="1" [(ngModel)]="editRoom.capacity" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Price per Night</label>
+                <input class="zen-input w-100" type="number" min="0" step="0.01" [(ngModel)]="editRoom.pricePerNight" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Available</label>
+                <select class="zen-input w-100" [(ngModel)]="editRoom.isAvailable">
+                  <option [value]="true">Yes</option>
+                  <option [value]="false">No</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Description</label>
+                <textarea class="zen-input w-100" rows="3" [(ngModel)]="editRoom.description"></textarea>
+              </div>
+              <div class="col-12 amenities-group">
+                <span class="form-label">Amenities</span>
+                <div class="amenity-tags">
+                  @for (amenity of amenitiesOptions; track amenity) {
+                    <button type="button" class="amenity-chip"
+                      [class.selected]="isEditAmenitySelected(amenity)"
+                      (click)="toggleEditAmenity(amenity)">
+                      {{ amenity }}
+                    </button>
+                  }
+                </div>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Add More Images</label>
+                <input class="zen-input w-100" type="file" multiple (change)="onEditRoomImagesChange($event)" accept="image/*" />
+              </div>
+              <div class="col-12 room-form-actions">
+                <button class="btn-confirm" (click)="updateRoom()" [disabled]="isEditingRoom">
+                  {{ isEditingRoom ? 'Saving...' : 'Save Changes' }}
+                </button>
+                <button class="btn-cancel" (click)="cancelEditRoom()">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    
       <div class="loading-section">
         <i class="pi pi-spin pi-spinner"></i>
         <p>Loading hotel information...</p>

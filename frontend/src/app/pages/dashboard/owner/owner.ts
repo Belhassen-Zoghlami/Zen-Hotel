@@ -30,6 +30,15 @@ export class Owner implements OnInit {
     images: [] as File[],
   };
 
+  editingHotelId: string | null = null;
+  editHotel = {
+    name: '',
+    location: '',
+    rating: '',
+    description: '',
+    images: [] as File[],
+  };
+
   isCreatingHotel = false;
   hotelCreateError = '';
   showAddHotelForm = false;
@@ -158,6 +167,67 @@ export class Owner implements OnInit {
 
   manageRooms(hotelId: string): void {
     this.router.navigate(['/hotels', hotelId, 'rooms']);
+  }
+
+  startEditHotel(hotel: any): void {
+    this.editingHotelId = hotel._id;
+    this.editHotel = {
+      name: hotel.name,
+      location: hotel.location,
+      rating: hotel.rating,
+      description: hotel.description,
+      images: []
+    };
+  }
+
+  cancelEditHotel(): void {
+    this.editingHotelId = null;
+    this.editHotel = { name: '', location: '', rating: '', description: '', images: [] };
+  }
+
+  onEditHotelImagesChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files) {
+      this.editHotel.images = [];
+      return;
+    }
+    this.editHotel.images = Array.from(input.files);
+  }
+
+  updateHotel(): void {
+    if (!this.editingHotelId) return;
+    if (!this.editHotel.name || !this.editHotel.location || !this.editHotel.rating) {
+      alert('Name, location and rating are required.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('name', this.editHotel.name);
+    formData.append('location', this.editHotel.location);
+    formData.append('rating', this.editHotel.rating);
+    formData.append('description', this.editHotel.description || '');
+    this.editHotel.images.forEach(file => formData.append('images', file));
+
+    this.hotelService.updateHotel(this.editingHotelId, formData).subscribe({
+      next: () => {
+        const idx = this.hotels.findIndex(h => h._id === this.editingHotelId);
+        if (idx !== -1) {
+          this.hotels[idx] = {
+            ...this.hotels[idx],
+            name: this.editHotel.name,
+            location: this.editHotel.location,
+            rating: this.editHotel.rating,
+            description: this.editHotel.description
+          };
+        }
+        this.cancelEditHotel();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error(err);
+        alert('Failed to update hotel.');
+      }
+    });
   }
 
   get confirmedCount(): number {
