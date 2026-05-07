@@ -129,12 +129,23 @@ exports.UpdateHotel= async (req,res) =>
         {
             return res.status(403).json({message: 'Access unauthorized'});
         }
-        
+
+        const imagePaths = req.files
+            ? req.files.map(file => {
+                const normalized = file.path.replace(/\\/g, '/');
+                const idx = normalized.indexOf('/images/');
+                return idx !== -1 ? normalized.slice(idx + '/images/'.length) : path.basename(file.path);
+            })
+            : [];
+
+        if (imagePaths.length) {
+            hotel.images = [...hotel.images, ...imagePaths];
+        }
+
         hotel.name = req.body.name || hotel.name;
         hotel.location = req.body.location || hotel.location;
         hotel.rating = req.body.rating || hotel.rating;
         hotel.description = req.body.description || hotel.description;
-
 
         await hotel.save();
         res.json({message: 'hotel updated successfully'});

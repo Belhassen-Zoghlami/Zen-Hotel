@@ -131,7 +131,7 @@ router.get('/:id',optAuth,hotelController.GetHotel);
  *         description: Hotel updated
  */
 //update hotel route
-router.patch('/:id',auth,reqRoles('owner','admin'),hotelController.UpdateHotel);
+router.patch('/:id',auth,reqRoles('owner','admin'),upload.array("images",5),hotelController.UpdateHotel);
 
 
 /**
