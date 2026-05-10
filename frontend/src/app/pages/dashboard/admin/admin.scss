@@ -76,12 +76,12 @@
 
 .zen-table {
   color: var(--zen-text-primary);
-
   thead tr {
-    border-bottom: 1px solid var(--zen-border);
+    border: 1px solid var(--zen-border);
     th {
-      color: var(--zen-text-secondary);
-      font-size: 0.85rem;
+      background-color: var(--zen-border);
+      color: var(--zen-text-primary);
+      font-size: 0.9rem;
       font-weight: 500;
       padding: 0.75rem;
     }
@@ -89,9 +89,11 @@
 
   tbody tr {
     border-bottom: 1px solid var(--zen-border);
+    border-left: 1px solid var(--zen-border);
+    border-right: 1px solid var(--zen-border);
     transition: background 0.2s;
     &:hover { background: var(--zen-bg-secondary); }
-    td { padding: 0.75rem; font-size: 0.9rem; }
+    td { padding: 0.75rem; font-size: 0.9rem; background-color: var(--zen-bg-card); color:var(--zen-text-primary)}
   }
 }
 
