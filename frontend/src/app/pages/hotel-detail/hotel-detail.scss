@@ -53,6 +53,23 @@
 
 .gold { color: var(--zen-gold); }
 
+.hotel-map-section {
+  margin-bottom: 3rem;
+
+  h2 {
+    font-size: 1.8rem;
+    color: var(--zen-text-primary);
+    margin-bottom: 1.5rem;
+  }
+
+  .hotel-map {
+    height: 400px;
+    border-radius: 12px;
+    border: 1px solid var(--zen-border);
+    overflow: hidden;
+  }
+}
+
 .rooms-section {
   h2 {
     font-size: 1.8rem;
