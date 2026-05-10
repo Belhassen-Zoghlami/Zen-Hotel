@@ -21,6 +21,7 @@ export class Rooms implements OnInit {
 
   hotel: any = null;
   rooms: any[] = [];
+  roomImageIndexes: Record<string, number> = {};
   isLoading = true;
   isCreatingRoom = false;
   roomCreateError = '';
@@ -81,6 +82,12 @@ export class Rooms implements OnInit {
     this.roomService.getRooms(hotelId).subscribe({
       next: (res: any) => {
         this.rooms = res;
+        this.roomImageIndexes = {};
+        this.rooms.forEach(room => {
+          if (room.images?.length) {
+            this.roomImageIndexes[room._id] = 0;
+          }
+        });
         this.isLoading = false;
         this.cdr.detectChanges();
       },
@@ -89,6 +96,35 @@ export class Rooms implements OnInit {
         this.isLoading = false;
       }
     });
+  }
+
+  getRoomImageIndex(roomId: string): number {
+    return this.roomImageIndexes[roomId] ?? 0;
+  }
+
+  nextRoomImage(roomId: string, imageCount: number): void {
+    const currentIndex = this.getRoomImageIndex(roomId);
+    if (currentIndex < imageCount - 1) {
+      this.roomImageIndexes[roomId] = currentIndex + 1;
+    }
+  }
+
+  prevRoomImage(roomId: string): void {
+    const currentIndex = this.getRoomImageIndex(roomId);
+    if (currentIndex > 0) {
+      this.roomImageIndexes[roomId] = currentIndex - 1;
+    }
+  }
+
+  selectRoomImage(roomId: string, image: any): void {
+    const room = this.rooms.find(r => r._id === roomId);
+    if (!room?.images?.length) {
+      return;
+    }
+    const selectedIndex = room.images.findIndex((item: any) => this.getImageUrl(item) === this.getImageUrl(image));
+    if (selectedIndex >= 0) {
+      this.roomImageIndexes[roomId] = selectedIndex;
+    }
   }
 
   onRoomImagesChange(event: Event): void {
@@ -139,6 +175,7 @@ export class Rooms implements OnInit {
         const room = res?.room ?? res;
         if (room) {
           this.rooms.unshift(room);
+          this.roomImageIndexes[room._id] = 0;
         }
         this.resetForm();
         this.cdr.detectChanges();
@@ -271,6 +308,7 @@ export class Rooms implements OnInit {
     this.roomService.deleteRoom(this.hotel._id, roomId).subscribe({
       next: () => {
         this.rooms = this.rooms.filter(room => room._id !== roomId);
+        delete this.roomImageIndexes[roomId];
         if (this.editingRoomId === roomId) {
           this.cancelEditRoom();
         }

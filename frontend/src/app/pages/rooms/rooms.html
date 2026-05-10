@@ -120,10 +120,31 @@
                     </div>
                     <p>{{ room.description }}</p>
                     @if (room.images?.length) {
-                      <div class="room-images">
-                        @for (img of room.images; track img) {
-                          <img [src]="getImageUrl(img)" alt="Room image" />
-                        }
+                      <div class="room-carousel">
+                        <div class="carousel-main">
+                          <button type="button" class="carousel-nav prev"
+                            (click)="prevRoomImage(room._id)"
+                            [disabled]="getRoomImageIndex(room._id) === 0">
+                            ‹
+                          </button>
+                          <img class="carousel-image"
+                            [src]="getImageUrl(room.images[getRoomImageIndex(room._id)])"
+                            alt="Room image" />
+                          <button type="button" class="carousel-nav next"
+                            (click)="nextRoomImage(room._id, room.images.length)"
+                            [disabled]="getRoomImageIndex(room._id) >= room.images.length - 1">
+                            ›
+                          </button>
+                        </div>
+                        <div class="carousel-thumbs">
+                          @for (img of room.images; track img) {
+                            <button type="button" class="thumb-btn"
+                              [class.active]="getRoomImageIndex(room._id) === room.images.indexOf(img)"
+                              (click)="selectRoomImage(room._id, img)">
+                              <img [src]="getImageUrl(img)" alt="Room thumbnail" />
+                            </button>
+                          }
+                        </div>
                       </div>
                     }
                     @if (room.amenities?.length) {

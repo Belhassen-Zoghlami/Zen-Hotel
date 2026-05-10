@@ -22,6 +22,7 @@ export class HotelDetail implements OnInit {
 
   hotel: any = null;
   rooms: any[] = [];
+  roomImageIndexes: Record<string, number> = {};
   selectedRoom: any = null;
   checkIn = '';
   checkOut = '';
@@ -39,11 +40,47 @@ export class HotelDetail implements OnInit {
       });
 
       this.hotelService.getRooms(id).subscribe({
-        next: (res: any) => { this.rooms = res;
+        next: (res: any) => {
+          this.rooms = res;
+          this.roomImageIndexes = {};
+          this.rooms.forEach(room => {
+            if (room.images?.length) {
+              this.roomImageIndexes[room._id] = 0;
+            }
+          });
           this.cdr.detectChanges();
-         },
+        },
         error: (err) => console.log(err)
       });
+    }
+  }
+
+  getRoomImageIndex(roomId: string): number {
+    return this.roomImageIndexes[roomId] ?? 0;
+  }
+
+  nextRoomImage(roomId: string, imageCount: number): void {
+    const currentIndex = this.getRoomImageIndex(roomId);
+    if (currentIndex < imageCount - 1) {
+      this.roomImageIndexes[roomId] = currentIndex + 1;
+    }
+  }
+
+  prevRoomImage(roomId: string): void {
+    const currentIndex = this.getRoomImageIndex(roomId);
+    if (currentIndex > 0) {
+      this.roomImageIndexes[roomId] = currentIndex - 1;
+    }
+  }
+
+  selectRoomImage(roomId: string, image: any): void {
+    const room = this.rooms.find(r => r._id === roomId);
+    if (!room?.images?.length) {
+      return;
+    }
+    const selectedIndex = room.images.findIndex((item: any) => this.getImageUrl(item) === this.getImageUrl(image));
+    if (selectedIndex >= 0) {
+      this.roomImageIndexes[roomId] = selectedIndex;
     }
   }
 
