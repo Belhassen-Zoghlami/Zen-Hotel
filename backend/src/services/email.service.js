@@ -2,17 +2,11 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const transporter = nodemailer.createTransport({
-
-    host: process.env.MAIL_HOST,
-
-    port: process.env.MAIL_PORT,
-
-    auth: {
-
-        user: process.env.MAIL_USER,
-
-        pass: process.env.MAIL_PASS,
-    },
+  service: 'gmail',
+  auth: {
+    user: process.env.MAIL_USER,
+    pass: process.env.MAIL_PASS,
+  },
 });
 
 exports.sendOwnerValidationEmail = async(user) =>
@@ -23,120 +17,182 @@ exports.sendOwnerValidationEmail = async(user) =>
         to: user.email,
 
         subject: 'ZenHotels Account has been approved',
-    //     html:`
-    //     <h2>Account Approved</h2>
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Owner Account Approved</title>
+</head>
 
-    //     <pre>
-    //     Hello ${user.name},
-    //     Your account has been approved and granted the role of <b>'owner'</b>.
-    //     You can now login and start managing your properties.
-    //     Best regards,
-    //     ZenHOTELS.
-    //     </pre>
-    //     `,
-    // };
-    html:
-    `
-    <style>
-    .container
-    {
-        font-family: Arial, Helvetica, sans-serif; background-color:#f4f6f8; padding:40px 0;
-    }
-    .table-container
-    {
-        background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08);
-    }
-    .header
-    {        
-        background:#1f2937; color:#ffffff; padding:20px 30px; text-align:center;
-    }
-    .email-title
-    {
-        margin:0; font-weight:600;
-    }
-    .email-body
-    {
-        padding:35px 30px; color:#333333; line-height:1.6; font-size:15px;
-    }
-    .subject
-    {
-        margin-top:0; color:#111827;
-    }
-    .button-container
-    {
-        text-align:center; margin:30px 0;
-    }
-    .redirect-button
-    {
-        background:#2563eb; color:#ffffff; text-decoration:none; padding:12px 28px; border-radius:6px; font-weight:600; display:inline-block;
-    }
-    .signature
-    {
-        margin-top:25px;
-    }
-    .footer
-    {
-        background:#f3f4f6; text-align:center; padding:18px; font-size:13px; color:#6b7280;
-    }
-    </style>
+<body style="
+  margin:0;
+  padding:0;
+  background:#0f172a;
+  font-family:Arial, Helvetica, sans-serif;
+  color:#e2e8f0;
+">
 
-    <div class="container">
-  
-  <table class="table-container"align="center" width="600" cellpadding="0" cellspacing="0">
-    
-    <!-- Header -->
-    <tr>
-      <td class="header">
-        <h2 class="email-title">ZenHOTELS</h2>
-      </td>
-    </tr>
+  <div style="
+    width:100%;
+    padding:40px 20px;
+    box-sizing:border-box;
+  ">
 
-    <!-- Body -->
-    <tr>
-      <td class="email-body">
-        
-        <h3 class="subject">Account Approved</h3>
+    <div style="
+      max-width:700px;
+      margin:0 auto;
+      background:#111827;
+      border:1px solid #334155;
+      border-radius:16px;
+      overflow:hidden;
+    ">
 
-        <p>Dear <strong>${user.name}</strong>,</p>
+      <!-- HERO -->
+      <div style="
+        background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);
+        padding:60px 40px;
+        text-align:center;
+        border-bottom:1px solid #334155;
+      ">
 
-        <p>
-        Your account has been successfully approved and you have been granted the role of 
-        <strong>Owner</strong> on the ZenHOTELS platform.
-        </p>
-
-        <p>
-        You may now log in and begin managing your properties.
-        </p>
-
-        <!-- Button -->
-        <div class="button-container">
-          <a href="http://localhost:${process.env.PORT}/api/auth/login"
-             class="redirect-button">
-            Login to Your Account
-          </a>
+        <div style="
+          display:inline-block;
+          background:rgba(201,168,76,0.15);
+          color:#c9a84c;
+          padding:8px 18px;
+          border-radius:999px;
+          font-size:13px;
+          margin-bottom:24px;
+        ">
+          ZenHOTEL Owner Access
         </div>
 
-        <p>If you require assistance, please contact our support team.</p>
+        <h1 style="
+          margin:0 0 20px 0;
+          font-size:42px;
+          line-height:1.2;
+          color:#f8fafc;
+          font-weight:bold;
+        ">
+          Account
+          <span style="color:#c9a84c;">Approved</span>
+        </h1>
 
-        <p class="signature">
-        Kind regards,<br>
-        <strong>The ZenHOTELS Team</strong>
+        <p style="
+          margin:0 auto 35px auto;
+          max-width:520px;
+          color:#94a3b8;
+          font-size:17px;
+          line-height:1.7;
+        ">
+          Your owner account has been successfully reviewed and approved by the ZenHOTEL administration team.
         </p>
 
-      </td>
-    </tr>
+        <a href="http://localhost:4200/login" style="
+          display:inline-block;
+          background:#c9a84c;
+          color:#0f172a;
+          text-decoration:none;
+          padding:14px 28px;
+          border-radius:10px;
+          font-size:15px;
+          font-weight:bold;
+        ">
+          Login to Dashboard
+        </a>
 
-    <!-- Footer -->
-    <tr>
-      <td class="footer">
-        © 2026 ZenHOTELS. All rights reserved.
-      </td>
-    </tr>
+      </div>
 
-  </table>
+      <!-- CONTENT -->
+      <div style="
+        padding:40px;
+      ">
 
-</div>
-    `};
+        <!-- WELCOME CARD -->
+        <div style="
+          background:#1e293b;
+          border:1px solid #334155;
+          border-radius:12px;
+          padding:24px;
+          margin-bottom:24px;
+        ">
+
+          <h2 style="
+            margin-top:0;
+            margin-bottom:16px;
+            color:#f8fafc;
+            font-size:24px;
+          ">
+            Welcome,
+            <span style="color:#c9a84c;">${user.name}</span>
+          </h2>
+
+          <p style="
+            margin:0;
+            color:#94a3b8;
+            line-height:1.8;
+            font-size:15px;
+          ">
+            Your account has been granted the
+            <strong style="color:#f8fafc;">Owner</strong>
+            role on the ZenHOTEL platform.
+            You may now access your dashboard and begin managing hotels, rooms, bookings, and property listings.
+          </p>
+
+        </div>
+
+        <!-- FEATURE CARD -->
+        <div style="
+          background:linear-gradient(135deg,#1e293b,#0f172a);
+          border:1px solid #c9a84c;
+          border-radius:12px;
+          padding:24px;
+        ">
+
+          <h3 style="
+            margin-top:0;
+            color:#f8fafc;
+            font-size:20px;
+            margin-bottom:10px;
+          ">
+            Next Steps
+          </h3>
+
+          <p style="
+            margin:0;
+            color:#94a3b8;
+            font-size:14px;
+            line-height:1.7;
+          ">
+            Log in to your owner dashboard to configure your hotel profile,
+            upload property images, manage availability, and track reservations in real time.
+          </p>
+
+        </div>
+
+      </div>
+
+      <!-- FOOTER -->
+      <div style="
+        border-top:1px solid #334155;
+        padding:24px;
+        text-align:center;
+        color:#64748b;
+        font-size:13px;
+        background:#0f172a;
+      ">
+        © 2026 ZenHOTEL — Premium Hotel Management Platform
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>
+`
+    };
     await transporter.sendMail(mail);
 }
 
@@ -144,6 +200,7 @@ exports.sendOwnerValidationEmail = async(user) =>
 //(incomplete) idea: email verification for all users on signup (before validation for owner)
 exports.sendVerificationEmail = async(user) =>
 {
+    const verificationLink = `http://localhost:4200/verify/${user._id}`;
 
     const mail = 
     {
@@ -153,15 +210,408 @@ exports.sendVerificationEmail = async(user) =>
 
         subject: 'ZehHotels Account Verification',
 
-        html: `<h2>account</h2>
-        <pre>
-        Thank you for Choosing ZenHotels.
-        Bellow you'll find your account verification link:
-        </pre>
-        <a href=${'account link here'}>
-        <button><b>Verify Account</b></button>
+        html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Verify Your Email</title>
+</head>
+<body style="
+  margin:0;
+  padding:0;
+  background:#0f172a;
+  font-family:Arial, Helvetica, sans-serif;
+  color:#e2e8f0;
+">
+  <div style="
+    width:100%;
+    padding:40px 20px;
+    box-sizing:border-box;
+  ">
+
+    <div style="
+      max-width:700px;
+      margin:0 auto;
+      background:#111827;
+      border:1px solid #334155;
+      border-radius:16px;
+      overflow:hidden;
+    ">
+
+      <!-- HERO -->
+      <div style="
+        background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);
+        padding:60px 40px;
+        text-align:center;
+        border-bottom:1px solid #334155;
+      ">
+
+        <div style="
+          display:inline-block;
+          background:rgba(201,168,76,0.15);
+          color:#c9a84c;
+          padding:8px 18px;
+          border-radius:999px;
+          font-size:13px;
+          margin-bottom:24px;
+        ">
+          ZenHOTEL Verification
+        </div>
+
+        <h1 style="
+          margin:0 0 20px 0;
+          font-size:42px;
+          line-height:1.2;
+          color:#f8fafc;
+          font-weight:bold;
+        ">
+          Verify Your
+          <span style="color:#c9a84c;">Account</span>
+        </h1>
+
+        <p style="
+          margin:0 auto 35px auto;
+          max-width:520px;
+          color:#94a3b8;
+          font-size:17px;
+          line-height:1.7;
+        ">
+          Complete your account setup and activate your ZenHOTEL experience securely.
+        </p>
+
+        <a href="${verificationLink}" style="
+          display:inline-block;
+          background:#c9a84c;
+          color:#0f172a;
+          text-decoration:none;
+          padding:14px 28px;
+          border-radius:10px;
+          font-size:15px;
+          font-weight:bold;
+        ">
+          Verify Email
         </a>
-        `
+
+      </div>
+
+      <!-- CONTENT -->
+      <div style="
+        padding:40px;
+      ">
+
+        <div style="
+          background:#1e293b;
+          border:1px solid #334155;
+          border-radius:12px;
+          padding:24px;
+          margin-bottom:24px;
+        ">
+
+          <h2 style="
+            margin-top:0;
+            margin-bottom:16px;
+            color:#f8fafc;
+            font-size:24px;
+          ">
+            Welcome to
+            <span style="color:#c9a84c;">ZenHOTEL</span>
+          </h2>
+
+          <p style="
+            margin:0;
+            color:#94a3b8;
+            line-height:1.8;
+            font-size:15px;
+          ">
+            This verification link secures your account and confirms your email address.
+            If you did not create this account, you can safely ignore this message.
+          </p>
+
+        </div>
+
+        <!-- INFO CARD -->
+        <div style="
+          background:linear-gradient(135deg,#1e293b,#0f172a);
+          border:1px solid #c9a84c;
+          border-radius:12px;
+          padding:24px;
+        ">
+
+          <h3 style="
+            margin-top:0;
+            color:#f8fafc;
+            font-size:20px;
+            margin-bottom:10px;
+          ">
+            Secure Access
+          </h3>
+
+          <p style="
+            margin:0;
+            color:#94a3b8;
+            font-size:14px;
+            line-height:1.7;
+          ">
+            For security reasons, this verification link may expire after a limited period.
+            Verify your account as soon as possible.
+          </p>
+
+        </div>
+
+      </div>
+
+      <!-- FOOTER -->
+      <div style="
+        border-top:1px solid #334155;
+        padding:24px;
+        text-align:center;
+        color:#64748b;
+        font-size:13px;
+        background:#0f172a;
+      ">
+        © 2026 ZenHOTEL — Premium Hotel Booking Experience
+      </div>
+
+    </div>
+
+  </div>
+</body>
+</html>
+`
     };
     await transporter.sendMail(mail);
 }
+
+
+
+exports.sendOwnerRequestNotification = async (user) => {
+
+    await transporter.sendMail({
+      from: process.env.MAIL_FROM,
+      to: process.env.ADMIN_EMAIL,
+      subject: "New Owner Validation Request",
+
+      html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Owner Validation Request</title>
+</head>
+
+<body style="
+  margin:0;
+  padding:0;
+  background:#0f172a;
+  font-family:Arial, Helvetica, sans-serif;
+  color:#e2e8f0;
+">
+
+  <div style="
+    width:100%;
+    padding:40px 20px;
+    box-sizing:border-box;
+  ">
+
+    <div style="
+      max-width:700px;
+      margin:0 auto;
+      background:#111827;
+      border:1px solid #334155;
+      border-radius:16px;
+      overflow:hidden;
+    ">
+
+      <!-- HERO -->
+      <div style="
+        background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);
+        padding:60px 40px;
+        text-align:center;
+        border-bottom:1px solid #334155;
+      ">
+
+        <div style="
+          display:inline-block;
+          background:rgba(201,168,76,0.15);
+          color:#c9a84c;
+          padding:8px 18px;
+          border-radius:999px;
+          font-size:13px;
+          margin-bottom:24px;
+        ">
+          ZenHOTEL Administration
+        </div>
+
+        <h1 style="
+          margin:0 0 20px 0;
+          font-size:40px;
+          line-height:1.2;
+          color:#f8fafc;
+          font-weight:bold;
+        ">
+          New Owner
+          <span style="color:#c9a84c;">Request</span>
+        </h1>
+
+        <p style="
+          margin:0 auto 35px auto;
+          max-width:520px;
+          color:#94a3b8;
+          font-size:17px;
+          line-height:1.7;
+        ">
+          A new user has submitted a request for owner account validation on the ZenHOTEL platform.
+        </p>
+
+      </div>
+
+      <!-- CONTENT -->
+      <div style="
+        padding:40px;
+      ">
+
+        <!-- USER CARD -->
+        <div style="
+          background:#1e293b;
+          border:1px solid #334155;
+          border-radius:12px;
+          padding:24px;
+          margin-bottom:24px;
+        ">
+
+          <h2 style="
+            margin-top:0;
+            margin-bottom:20px;
+            color:#f8fafc;
+            font-size:24px;
+          ">
+            Applicant Information
+          </h2>
+
+          <table width="100%" cellpadding="0" cellspacing="0">
+
+            <tr>
+              <td style="
+                padding:10px 0;
+                color:#94a3b8;
+                width:140px;
+              ">
+                Full Name
+              </td>
+
+              <td style="
+                padding:10px 0;
+                color:#f8fafc;
+                font-weight:bold;
+              ">
+                ${user.name}
+              </td>
+            </tr>
+
+            <tr>
+              <td style="
+                padding:10px 0;
+                color:#94a3b8;
+              ">
+                Email Address
+              </td>
+
+              <td style="
+                padding:10px 0;
+                color:#f8fafc;
+                font-weight:bold;
+              ">
+                ${user.email}
+              </td>
+            </tr>
+
+            <tr>
+              <td style="
+                padding:10px 0;
+                color:#94a3b8;
+              ">
+                Requested Role
+              </td>
+
+              <td style="
+                padding:10px 0;
+                color:#c9a84c;
+                font-weight:bold;
+              ">
+                Owner
+              </td>
+            </tr>
+
+          </table>
+
+        </div>
+
+        <!-- ACTION CARD -->
+        <div style="
+          background:linear-gradient(135deg,#1e293b,#0f172a);
+          border:1px solid #c9a84c;
+          border-radius:12px;
+          padding:24px;
+        ">
+
+          <h3 style="
+            margin-top:0;
+            color:#f8fafc;
+            font-size:20px;
+            margin-bottom:10px;
+          ">
+            Administrative Action Required
+          </h3>
+
+          <p style="
+            margin:0 0 25px 0;
+            color:#94a3b8;
+            font-size:14px;
+            line-height:1.7;
+          ">
+            Review the applicant information and approve or reject the owner access request from the administration dashboard.
+          </p>
+
+          <a href="http://localhost:4200/login"
+             style="
+              display:inline-block;
+              background:#c9a84c;
+              color:#0f172a;
+              text-decoration:none;
+              padding:14px 28px;
+              border-radius:10px;
+              font-size:15px;
+              font-weight:bold;
+             ">
+            Open Admin Dashboard
+          </a>
+
+        </div>
+
+      </div>
+
+      <!-- FOOTER -->
+      <div style="
+        border-top:1px solid #334155;
+        padding:24px;
+        text-align:center;
+        color:#64748b;
+        font-size:13px;
+        background:#0f172a;
+      ">
+        © 2026 ZenHOTEL — Administrative Notification System
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>
+      `
+    });
+
+    console.log("Owner validation request email sent.");
+
+};

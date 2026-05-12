@@ -1,6 +1,8 @@
 const User = require('../models/user.model');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { sendVerificationEmail, sendOwnerRequestNotification } = require('../services/email.service');
+require('dotenv').config();
 
 exports.register = async (req, res) => {
 
@@ -23,6 +25,18 @@ exports.register = async (req, res) => {
       password: hashedPassword,
       role: role || 'client'
     });
+    try
+    {
+      await sendVerificationEmail(user);
+      if (user.role === 'owner')
+        await sendOwnerRequestNotification(user);
+    }
+    catch (err)
+    {
+      user.deleteOne();
+      console.error('Error sending validation email:', err);
+      return res.status(500).json({ message: 'Error sending validation email' });
+    }
 
     return res.status(201).json
     (
