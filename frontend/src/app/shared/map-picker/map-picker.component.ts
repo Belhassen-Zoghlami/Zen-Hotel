@@ -89,9 +89,9 @@ export class MapPickerComponent implements AfterViewInit {
     if (!this.searchQuery.trim()) return;
 
     try {
-      // Using Nominatim (OpenStreetMap) geocoding API
+      // Using Nominatim (OpenStreetMap) geocoding API with English language
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.searchQuery)}&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.searchQuery)}&limit=1&accept-language=en`
       );
       const data = await response.json();
 
@@ -118,9 +118,9 @@ export class MapPickerComponent implements AfterViewInit {
 
   async reverseGeocode(lat: number, lng: number) {
     try {
-      // Using Nominatim reverse geocoding API
+      // Using Nominatim reverse geocoding API with English language
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=en`
       );
       const data = await response.json();
 
