@@ -36,7 +36,11 @@ const userSchema = new mongoose.Schema(
       return this.role !== 'owner';
     }
   },
-
+  email_verified:
+  {
+    type: Boolean,
+    default: false
+  },
   isActive:
   {
     type : Boolean,
