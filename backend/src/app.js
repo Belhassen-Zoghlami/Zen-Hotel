@@ -11,6 +11,7 @@ const app = express();
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const bookingRoutes = require('./routes/booking.routes');
+const aiRoutes = require('./routes/ai.routes');
 
 app.use(express.json());
 app.use(cors({
@@ -27,5 +28,6 @@ app.use('/api/admin',adminRoutes)
 app.use('/api/Hotel',hotelRoutes);
 app.use('/api/Room',roomRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/ai', aiRoutes);
 
 module.exports = app;

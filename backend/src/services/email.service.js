@@ -198,9 +198,8 @@ exports.sendOwnerValidationEmail = async(user) =>
 
 
 //(incomplete) idea: email verification for all users on signup (before validation for owner)
-exports.sendVerificationEmail = async(user) =>
+exports.sendVerificationEmail = async(user, verificationLink) =>
 {
-    const verificationLink = `http://localhost:4200/verify/${user._id}`;
 
     const mail = 
     {
