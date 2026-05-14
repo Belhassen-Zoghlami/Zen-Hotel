@@ -1,0 +1,45 @@
+<div class="map-picker-container">
+  <!-- Search Bar -->
+  <div class="search-bar">
+    <div class="search-input-group">
+      <input 
+        type="text" 
+        [(ngModel)]="searchQuery" 
+        (keyup.enter)="searchLocation()"
+        placeholder="Search for a location..."
+        class="search-input">
+      <button (click)="searchLocation()" class="search-btn" title="Search">
+        <i class="pi pi-search"></i>
+      </button>
+    </div>
+    <button (click)="getCurrentLocation()" class="location-btn" title="Use my current location">
+      <i class="pi pi-map-marker"></i>
+    </button>
+  </div>
+
+  <!-- Map Container -->
+  <div #map class="map-container"></div>
+
+  <!-- Selected Location Info -->
+  <div *ngIf="currentAddress" class="location-info">
+    <div class="info-header">
+      <i class="pi pi-check-circle"></i>
+      <span>Selected Location</span>
+    </div>
+    <div class="info-content">
+      <p class="address">{{currentAddress}}</p>
+      <p class="coordinates" *ngIf="selectedCoordinates">
+        Lat: {{selectedCoordinates.latitude.toFixed(6)}}, Lng: {{selectedCoordinates.longitude.toFixed(6)}}
+      </p>
+    </div>
+    <button (click)="clearSelection()" class="clear-btn">
+      <i class="pi pi-times"></i> Clear
+    </button>
+  </div>
+
+  <!-- Instructions -->
+  <div *ngIf="!currentAddress" class="instructions">
+    <i class="pi pi-info-circle"></i>
+    <p>Click on the map or search for a location to set the hotel's position</p>
+  </div>
+</div>

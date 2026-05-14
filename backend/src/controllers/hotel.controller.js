@@ -47,7 +47,11 @@ exports.CreateHoltel = async (req,res)=>
             images: imagePaths,
             rating: req.body.rating,
             description: req.body.description,
-            owner: req.user.id
+            owner: req.user.id,
+            coordinates: {
+                latitude: req.body.latitude ? parseFloat(req.body.latitude) : null,
+                longitude: req.body.longitude ? parseFloat(req.body.longitude) : null
+            }
         });
         res.status(201).json({hotel});
     }
@@ -146,6 +150,13 @@ exports.UpdateHotel= async (req,res) =>
         hotel.location = req.body.location || hotel.location;
         hotel.rating = req.body.rating || hotel.rating;
         hotel.description = req.body.description || hotel.description;
+        
+        if (req.body.latitude !== undefined && req.body.longitude !== undefined) {
+            hotel.coordinates = {
+                latitude: parseFloat(req.body.latitude),
+                longitude: parseFloat(req.body.longitude)
+            };
+        }
 
         await hotel.save();
         res.json({message: 'hotel updated successfully'});
