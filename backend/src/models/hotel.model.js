@@ -13,8 +13,21 @@ const hotelSchema = new mongoose.Schema
         {
             type: String,
             required: true
-        }
-        ,rating:
+        },
+        coordinates:
+        {
+            latitude:
+            {
+                type: Number,
+                default: null
+            },
+            longitude:
+            {
+                type: Number,
+                default: null
+            }
+        },
+        rating:
         {
             type: String, // 1 star, 4.5 stars etc ..for now string but posed to be float/double or wv
             required: true

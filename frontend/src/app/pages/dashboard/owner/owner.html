@@ -60,6 +60,14 @@
               <label class="form-label">City / Location</label>
               <input class="zen-input w-100" type="text" [(ngModel)]="newHotel.location" placeholder="City or neighborhood" />
             </div>
+            <div class="col-12">
+              <label class="form-label">Select Location on Map</label>
+              <app-map-picker 
+                (locationSelected)="onNewHotelLocationSelected($event)"
+                [initialCoordinates]="newHotel.coordinates.latitude && newHotel.coordinates.longitude ? { latitude: newHotel.coordinates.latitude, longitude: newHotel.coordinates.longitude } : undefined"
+                [initialAddress]="newHotel.location">
+              </app-map-picker>
+            </div>
             <div class="col-md-4">
               <label class="form-label">Rating</label>
               <select class="zen-input w-100" [(ngModel)]="newHotel.rating">
@@ -109,6 +117,14 @@
             <div class="col-md-4">
               <label class="form-label">City / Location</label>
               <input class="zen-input w-100" type="text" [(ngModel)]="editHotel.location" />
+            </div>
+            <div class="col-12">
+              <label class="form-label">Update Location on Map</label>
+              <app-map-picker 
+                (locationSelected)="onEditHotelLocationSelected($event)"
+                [initialCoordinates]="editHotel.coordinates.latitude && editHotel.coordinates.longitude ? { latitude: editHotel.coordinates.latitude, longitude: editHotel.coordinates.longitude } : undefined"
+                [initialAddress]="editHotel.location">
+              </app-map-picker>
             </div>
             <div class="col-md-4">
               <label class="form-label">Rating</label>

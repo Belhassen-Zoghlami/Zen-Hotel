@@ -4,10 +4,11 @@ import { HotelService } from '../../../core/services/hotel';
 import { BookingService } from '../../../core/services/booking';
 import { Router } from '@angular/router';
 import { DatePipe } from '@angular/common';
+import { MapPickerComponent } from '../../../shared/map-picker/map-picker.component';
 
 @Component({
   selector: 'app-owner',
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, FormsModule, MapPickerComponent],
   templateUrl: './owner.html',
   styleUrl: './owner.scss',
 })
@@ -28,6 +29,7 @@ export class Owner implements OnInit {
     rating: '',
     description: '',
     images: [] as File[],
+    coordinates: { latitude: null as number | null, longitude: null as number | null }
   };
 
   editingHotelId: string | null = null;
@@ -37,6 +39,7 @@ export class Owner implements OnInit {
     rating: '',
     description: '',
     images: [] as File[],
+    coordinates: { latitude: null as number | null, longitude: null as number | null }
   };
 
   isCreatingHotel = false;
@@ -118,6 +121,10 @@ export class Owner implements OnInit {
     formData.append('location', this.newHotel.location);
     formData.append('rating', this.newHotel.rating);
     formData.append('description', this.newHotel.description || '');
+    if (this.newHotel.coordinates.latitude !== null && this.newHotel.coordinates.longitude !== null) {
+      formData.append('latitude', this.newHotel.coordinates.latitude.toString());
+      formData.append('longitude', this.newHotel.coordinates.longitude.toString());
+    }
     this.newHotel.images.forEach(file => formData.append('images', file));
 
     this.hotelService.createHotel(formData).subscribe({
@@ -128,7 +135,7 @@ export class Owner implements OnInit {
           this.selectedHotelId = hotel._id;
           this.loadBookings(hotel._id);
         }
-        this.newHotel = { name: '', location: '', rating: '', description: '', images: [] };
+        this.newHotel = { name: '', location: '', rating: '', description: '', images: [], coordinates: { latitude: null, longitude: null } };
         this.showAddHotelForm = false;
         this.cdr.detectChanges();
       },
@@ -176,13 +183,14 @@ export class Owner implements OnInit {
       location: hotel.location,
       rating: hotel.rating,
       description: hotel.description,
-      images: []
+      images: [],
+      coordinates: hotel.coordinates || { latitude: null, longitude: null }
     };
   }
 
   cancelEditHotel(): void {
     this.editingHotelId = null;
-    this.editHotel = { name: '', location: '', rating: '', description: '', images: [] };
+    this.editHotel = { name: '', location: '', rating: '', description: '', images: [], coordinates: { latitude: null, longitude: null } };
   }
 
   onEditHotelImagesChange(event: Event): void {
@@ -206,6 +214,10 @@ export class Owner implements OnInit {
     formData.append('location', this.editHotel.location);
     formData.append('rating', this.editHotel.rating);
     formData.append('description', this.editHotel.description || '');
+    if (this.editHotel.coordinates.latitude !== null && this.editHotel.coordinates.longitude !== null) {
+      formData.append('latitude', this.editHotel.coordinates.latitude.toString());
+      formData.append('longitude', this.editHotel.coordinates.longitude.toString());
+    }
     this.editHotel.images.forEach(file => formData.append('images', file));
 
     this.hotelService.updateHotel(this.editingHotelId, formData).subscribe({
@@ -236,5 +248,31 @@ export class Owner implements OnInit {
 
   get pendingCount(): number {
     return this.bookings.filter(b => b.status === 'pending').length;
+  }
+
+  onNewHotelLocationSelected(location: { latitude: number; longitude: number; address: string }): void {
+    this.newHotel.coordinates.latitude = location.latitude;
+    this.newHotel.coordinates.longitude = location.longitude;
+    // Update location text with the address from the map
+    if (location.address) {
+      // Extract city/location from the full address
+      const parts = location.address.split(',');
+      if (parts.length > 0) {
+        this.newHotel.location = parts[0].trim();
+      }
+    }
+  }
+
+  onEditHotelLocationSelected(location: { latitude: number; longitude: number; address: string }): void {
+    this.editHotel.coordinates.latitude = location.latitude;
+    this.editHotel.coordinates.longitude = location.longitude;
+    // Update location text with the address from the map
+    if (location.address) {
+      // Extract city/location from the full address
+      const parts = location.address.split(',');
+      if (parts.length > 0) {
+        this.editHotel.location = parts[0].trim();
+      }
+    }
   }
 }
