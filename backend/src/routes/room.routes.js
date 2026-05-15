@@ -5,6 +5,7 @@ const auth = require('../middleware/auth.middleware');
 const reqRoles = require('../middleware/role.middleware');
 const upload = require('../middleware/images.middleware');
 const optAuth = require('../middleware/OptAuth.middleware');
+const { cacheMiddleware } = require('../middleware/cache.middleware');
 
 
 /**
@@ -78,14 +79,14 @@ const optAuth = require('../middleware/OptAuth.middleware');
  *         description: Access unauthorized
  */
 //get all rooms route
-router.get('/:hotelId',optAuth,roomController.GetHotelRooms);
+router.get('/:hotelId', cacheMiddleware(300000), optAuth, roomController.GetHotelRooms); // Cache for 5 minutes
 //create room route
-router.post('/:hotelId',auth,reqRoles('owner','admin'),upload.array("images",5),roomController.CreateRoom);
+router.post('/:hotelId', auth, reqRoles('owner','admin'), upload.array("images",5), roomController.CreateRoom);
 //get room by id route
-router.get('/:hotelId/:roomId',auth,roomController.GetRoom);
+router.get('/:hotelId/:roomId', cacheMiddleware(300000), auth, roomController.GetRoom); // Cache for 5 minutes
 //update room route
-router.patch('/:hotelId/:roomId',auth,reqRoles('owner','admin'),upload.array("images",5),roomController.UpdateRoom);
+router.patch('/:hotelId/:roomId', auth, reqRoles('owner','admin'), upload.array("images",5), roomController.UpdateRoom);
 //delete room route
-router.delete('/:hotelId/:roomId',auth, reqRoles('owner','admin'), roomController.DeleteRoom);
+router.delete('/:hotelId/:roomId', auth, reqRoles('owner','admin'), roomController.DeleteRoom);
 
 module.exports = router;

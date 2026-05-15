@@ -18,6 +18,10 @@ echo -e "
     MAIL_USER=>mail user<
     MAIL_PASS=>mail password<
     MAIL_FROM=>mail from< 
+
+    # AI (Google Gemini) - optional, falls back to rule-based mode if absent
+    # Get a free key at: https://aistudio.google.com/app/apikey
+    GEMINI_API_KEY=>your_gemini_api_key<
 " > .env
 
 
