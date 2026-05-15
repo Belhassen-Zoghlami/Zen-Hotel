@@ -15,7 +15,7 @@
           placeholder="John Doe"
         />
         @if (registerForm.get('name')?.invalid && registerForm.get('name')?.touched) {
-          <span class="error">Name must be at least 3 characters</span>
+        <span class="error">Name must be at least 3 characters</span>
         }
       </div>
 
@@ -28,7 +28,7 @@
           placeholder="your@email.com"
         />
         @if (registerForm.get('email')?.invalid && registerForm.get('email')?.touched) {
-          <span class="error">Please enter a valid email</span>
+        <span class="error">Please enter a valid email</span>
         }
       </div>
 
@@ -41,7 +41,7 @@
           placeholder="••••••••"
         />
         @if (registerForm.get('password')?.invalid && registerForm.get('password')?.touched) {
-          <span class="error">Password must be at least 6 characters</span>
+        <span class="error">Password must be at least 6 characters</span>
         }
       </div>
 
@@ -52,19 +52,18 @@
           <option value="owner">Owner</option>
         </select>
         @if (registerForm.get('role')?.invalid && registerForm.get('role')?.touched) {
-          <span class="error">Please select a role</span>
+        <span class="error">Please select a role</span>
         }
       </div>
 
       @if (errorMessage) {
-        <div class="error text-center mb-2">{{ errorMessage }}</div>
-      }
-      @if (successMessage) {
-        <div class="success text-center mb-2">{{ successMessage }}</div>
+      <div class="error text-center mb-2">{{ errorMessage }}</div>
+      } @if (successMessage) {
+      <div class="success text-center mb-2">{{ successMessage }}</div>
       }
 
-      <button type="submit" class="btn-zen w-100" [disabled]="registerForm.invalid">
-        Create Account
+      <button type="submit" class="btn-zen w-100" [disabled]="registerForm.invalid || isLoading">
+        {{ isLoading ? 'Creating account...' : 'Create Account' }}
       </button>
     </form>
 

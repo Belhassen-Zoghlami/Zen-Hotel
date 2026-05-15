@@ -1,1 +1,42 @@
-<p>resend-verification works!</p>
+<div class="resend-wrapper">
+  <div class="resend-card">
+    <div class="resend-header">
+      <h2>Resend <span class="gold">Verification</span></h2>
+      <p>Enter your email to receive a new verification link.</p>
+    </div>
+
+    @if (successMessage) {
+    <div class="success-notice">
+      <span>{{ successMessage }}</span>
+    </div>
+    } @if (errorMessage) {
+    <div class="error-notice">
+      <span>{{ errorMessage }}</span>
+    </div>
+    }
+
+    <form [formGroup]="resendForm" (ngSubmit)="onSubmit()">
+      <div class="mb-3">
+        <label class="form-label">Email address</label>
+        <input
+          formControlName="email"
+          type="email"
+          class="form-control zen-input"
+          placeholder="your@email.com"
+        />
+        @if (resendForm.get('email')?.invalid && resendForm.get('email')?.touched) {
+        <span class="error">Please enter a valid email address</span>
+        }
+      </div>
+
+      <button type="submit" class="btn-zen w-100" [disabled]="resendForm.invalid || isLoading">
+        {{ isLoading ? 'Sending...' : 'Send Verification Email' }}
+      </button>
+    </form>
+
+    <p class="login-link">
+      Already verified?
+      <a routerLink="/login">Sign In</a>
+    </p>
+  </div>
+</div>

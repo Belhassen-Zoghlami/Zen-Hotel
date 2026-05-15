@@ -1,7 +1,6 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const authController = require('../controllers/auth.controller');
-
+const authController = require("../controllers/auth.controller");
 
 /**
  * @swagger
@@ -35,9 +34,10 @@ const authController = require('../controllers/auth.controller');
  *       400:
  *         description: Invalid credentials
  */
-router.post('/register', authController.register);
-router.post('/login', authController.login);
-router.post('/logout',authController.Logout);
-router.get('/verify-email', authController.verifyEmail);
+router.post("/register", authController.register);
+router.post("/login", authController.login);
+router.post("/logout", authController.Logout);
+router.get("/verify-email", authController.verifyEmail);
+router.post("/resend-verification", authController.resendVerification);
 
 module.exports = router;

@@ -1,1 +1,35 @@
-<p>verify-email works!</p>
+<div class="verify-wrapper">
+  <div class="verify-card">
+    @if (status === 'loading') {
+    <div class="loading-spinner">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <p class="verify-subtitle" style="text-align: center; margin-top: 1.5rem">
+      Checking verification status…
+    </p>
+    } @if (status === 'success') {
+    <div class="status-icon success-icon">
+      <span class="icon-symbol">✓</span>
+    </div>
+    <h2 class="verify-title">Email <span class="gold">Verified!</span></h2>
+    <p class="verify-subtitle">
+      Your account is now active. You can sign in and start exploring ZenHotels.
+    </p>
+    <div class="verify-actions">
+      <button class="btn-zen" (click)="goToLogin()">Go to Login</button>
+    </div>
+    } @if (status === 'error') {
+    <div class="status-icon error-icon">
+      <span class="icon-symbol">✕</span>
+    </div>
+    <h2 class="verify-title">Verification <span class="danger">Failed</span></h2>
+    <p class="verify-subtitle">{{ reason }}</p>
+    <div class="verify-actions">
+      <button class="btn-zen" (click)="goToResend()">Try Again</button>
+      <button class="btn-outline" (click)="goToLogin()">Back to Login</button>
+    </div>
+    }
+  </div>
+</div>

@@ -15,7 +15,7 @@
           placeholder="your@email.com"
         />
         @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
-          <span class="error">Please enter a valid email</span>
+        <span class="error">Please enter a valid email</span>
         }
       </div>
 
@@ -28,13 +28,24 @@
           placeholder="••••••••"
         />
         @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
-          <span class="error">Password is required</span>
+        <span class="error">Password is required</span>
         }
       </div>
-      @if (errorMessage) {
-        <div class="error text-center mb-2">{{ errorMessage }}</div>
+
+      @if (unverifiedEmail) {
+      <div class="unverified-notice">
+        <p>Your email is not verified.</p>
+        <a [routerLink]="['/resend-verification']" [queryParams]="{ email: unverifiedEmail }">
+          Resend verification email →
+        </a>
+      </div>
+      } @if (errorMessage) {
+      <div class="error text-center mb-2">{{ errorMessage }}</div>
       }
-      <button type="submit" class="btn-zen w-100" [disabled]="loginForm.invalid">Sign In</button>
+
+      <button type="submit" class="btn-zen w-100" [disabled]="loginForm.invalid || isLoading">
+        {{ isLoading ? 'Signing in...' : 'Sign In' }}
+      </button>
     </form>
 
     <p class="register-link">

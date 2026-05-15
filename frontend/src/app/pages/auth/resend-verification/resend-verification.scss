@@ -1,0 +1,132 @@
+.resend-wrapper {
+  min-height: calc(100vh - 140px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.resend-card {
+  background: var(--zen-bg-card);
+  border: 1px solid var(--zen-border);
+  border-radius: 16px;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 420px;
+}
+
+.resend-header {
+  text-align: center;
+  margin-bottom: 2rem;
+
+  h2 {
+    font-size: 2rem;
+    color: var(--zen-text-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    color: var(--zen-text-secondary);
+    font-size: 0.9rem;
+  }
+}
+
+.gold { color: var(--zen-gold); }
+
+.form-label {
+  color: var(--zen-text-secondary);
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+}
+
+.zen-input {
+  background: var(--zen-bg-secondary);
+  border: 1px solid var(--zen-border);
+  color: var(--zen-text-primary);
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+
+  &:focus {
+    background: var(--zen-bg-secondary);
+    border-color: var(--zen-gold);
+    color: var(--zen-text-primary);
+    box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.15);
+  }
+
+  &::placeholder {
+    color: var(--zen-text-muted);
+  }
+}
+
+.error {
+  color: var(--zen-danger);
+  font-size: 0.8rem;
+  margin-top: 0.3rem;
+  display: block;
+}
+
+.success-notice {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+
+  span {
+    color: var(--zen-success);
+    font-size: 0.85rem;
+    display: block;
+  }
+}
+
+.error-notice {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+
+  span {
+    color: var(--zen-danger);
+    font-size: 0.85rem;
+    display: block;
+  }
+}
+
+.btn-zen {
+  background: var(--zen-gold);
+  color: var(--zen-bg-primary);
+  border: none;
+  padding: 0.8rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 0.5rem;
+
+  &:hover:not(:disabled) {
+    background: var(--zen-gold-light);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.login-link {
+  text-align: center;
+  margin-top: 1.5rem;
+  color: var(--zen-text-secondary);
+  font-size: 0.9rem;
+
+  a {
+    color: var(--zen-gold);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--zen-gold-light);
+    }
+  }
+}
