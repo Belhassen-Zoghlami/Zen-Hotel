@@ -10,28 +10,42 @@ import { AuthService } from '../../../core/services/auth';
   styleUrl: './login.scss',
 })
 export class Login {
-
   loginForm = new FormGroup({
     email: new FormControl('', [Validators.required, Validators.email]),
-    password: new FormControl('', [Validators.required])
+    password: new FormControl('', [Validators.required]),
   });
 
   errorMessage = '';
+  unverifiedEmail = '';
+  isLoading = false;
 
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
   ) {}
 
   onSubmit(): void {
-    if (this.loginForm.valid) {
+    if (this.loginForm.valid && !this.isLoading) {
+      this.isLoading = true;
+      this.errorMessage = '';
+      this.unverifiedEmail = '';
+
       this.authService.login(this.loginForm.value).subscribe({
         next: (res) => {
+          this.isLoading = false;
           this.router.navigate(['/']);
         },
         error: (err) => {
-          this.errorMessage = err.error.message || 'Login failed';
-        }
+          this.isLoading = false;
+          if (err.error?.code === 'EMAIL_NOT_VERIFIED') {
+            this.unverifiedEmail = err.error.email || '';
+            this.router.navigate(['/resend-verification'], {
+              queryParams: { email: err.error.email },
+            });
+          } else {
+            this.errorMessage = err.error?.message || 'Login failed';
+          }
+        },
       });
     }
   }

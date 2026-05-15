@@ -87,6 +87,30 @@
   }
 }
 
+.unverified-notice {
+  background: rgba(201, 168, 76, 0.1);
+  border: 1px solid rgba(201, 168, 76, 0.4);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+
+  p {
+    color: var(--zen-gold);
+    margin: 0 0 0.3rem 0;
+  }
+
+  a {
+    color: var(--zen-gold);
+    text-decoration: underline;
+    font-weight: 500;
+
+    &:hover {
+      color: var(--zen-gold-light);
+    }
+  }
+}
+
 .register-link {
   text-align: center;
   margin-top: 1.5rem;

@@ -1,0 +1,134 @@
+.verify-wrapper {
+  min-height: calc(100vh - 140px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.verify-card {
+  background: var(--zen-bg-card);
+  border: 1px solid var(--zen-border);
+  border-radius: 16px;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+}
+
+.status-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+
+  .icon-symbol {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+}
+
+.success-icon {
+  background: rgba(201, 168, 76, 0.15);
+  border: 2px solid var(--zen-gold);
+
+  .icon-symbol {
+    color: var(--zen-gold);
+  }
+}
+
+.error-icon {
+  background: rgba(239, 68, 68, 0.1);
+  border: 2px solid var(--zen-danger);
+
+  .icon-symbol {
+    color: var(--zen-danger);
+  }
+}
+
+.verify-title {
+  font-size: 1.75rem;
+  color: var(--zen-text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.gold { color: var(--zen-gold); }
+.danger { color: var(--zen-danger); }
+
+.verify-subtitle {
+  color: var(--zen-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-bottom: 1.75rem;
+}
+
+.verify-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.btn-zen {
+  background: var(--zen-gold);
+  color: var(--zen-bg-primary);
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 100%;
+
+  &:hover {
+    background: var(--zen-gold-light);
+  }
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--zen-gold);
+  border: 1px solid var(--zen-gold);
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  width: 100%;
+
+  &:hover {
+    background: rgba(201, 168, 76, 0.1);
+    color: var(--zen-gold-light);
+    border-color: var(--zen-gold-light);
+  }
+}
+
+// Three animated gold dots — matches the typing indicator in the AI chat
+.loading-spinner {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  padding: 1rem 0;
+
+  span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--zen-gold);
+    animation: dot-pulse 1.4s infinite ease-in-out both;
+
+    &:nth-child(1) { animation-delay: -0.32s; }
+    &:nth-child(2) { animation-delay: -0.16s; }
+    &:nth-child(3) { animation-delay: 0s; }
+  }
+
+  @keyframes dot-pulse {
+    0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
+    40%            { transform: scale(1); opacity: 1; }
+  }
+}
