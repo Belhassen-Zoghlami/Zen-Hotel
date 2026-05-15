@@ -1,5 +1,6 @@
 const fs = require('fs').promises;
 const Hotel = require('../models/hotel.model');
+const { clearCache } = require('../middleware/cache.middleware');
 const Room = require('../models/room.model');
 const mongoose = require('mongoose');
 const path = require('path');
@@ -53,6 +54,10 @@ exports.CreateHoltel = async (req,res)=>
                 longitude: req.body.longitude ? parseFloat(req.body.longitude) : null
             }
         });
+        
+        // Clear cache when hotel is created
+        clearCache('/api/Hotel');
+        
         res.status(201).json({hotel});
     }
     catch(err)
@@ -159,6 +164,10 @@ exports.UpdateHotel= async (req,res) =>
         }
 
         await hotel.save();
+        
+        // Clear cache when hotel is updated
+        clearCache('/api/Hotel');
+        
         res.json({message: 'hotel updated successfully'});
     }
     catch(err)
@@ -172,37 +181,37 @@ exports.UpdateHotel= async (req,res) =>
 //                                                                  delete hotel
 
 
-exports.DeleteHotel = async(req,res) =>
-
-    {
-        try
-
-    {
+exports.DeleteHotel = async(req,res)=>
+{
+    try {
         const hotel = await Hotel.findById(req.params.id);
-        if (!hotel)
-        {
-            return res.status(404).json({message: 'cant delete, hotel not found'});
-        }
-        if(hotel.owner.toString() !== req.user.id && req.user.role !== 'admin')
-        {
-
-            return res.status(403).json({message: 'Access unauthorized'});
+        if (!hotel) {
+            return res.status(404).json({ message: 'Hotel not found' });
         }
 
-        // Remove hotel images from disk before deleting the hotel
-        await deleteImagesFromDisk(hotel.images);
+        // Check authorization
+        if (hotel.owner.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Not authorized to delete this hotel' });
+        }
 
-        // Delete all rooms associated with this hotel
+        // Delete associated images
+        if (hotel.images && hotel.images.length > 0) {
+            await deleteImagesFromDisk(hotel.images);
+        }
+
+        // Delete associated rooms
         await Room.deleteMany({ hotel: req.params.id });
 
-        await hotel.deleteOne();
-
-        res.json({message : 'hotel and associated rooms deleted successfully'});
+        await Hotel.findByIdAndDelete(req.params.id);
+        
+        // Clear cache when hotel is deleted
+        clearCache('/api/Hotel');
+        
+        res.json({message: 'hotel deleted successfully'});
     }
-        catch(err)
+    catch(err)
     {
-
-            res.status(500).json({message: 'Server error'});
-            console.error('Error deleting hotel:', err);
+        console.error('Error deleting hotel:', err);
+        res.status(500).json({ message: 'Server error' })
     }
-    }
+}

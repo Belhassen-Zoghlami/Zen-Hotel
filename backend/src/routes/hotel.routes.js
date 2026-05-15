@@ -4,6 +4,7 @@ const auth = require('../middleware/auth.middleware');
 const reqRoles = require('../middleware/role.middleware');
 const optAuth = require('../middleware/OptAuth.middleware');
 const upload = require('../middleware/images.middleware');
+const { cacheMiddleware } = require('../middleware/cache.middleware');
 
 const hotelController = require('../controllers/hotel.controller');
 
@@ -75,7 +76,7 @@ router.post('/',auth,reqRoles('owner','admin'),upload.array("images",5),hotelCon
  *         description: List of hotels
  */
 //get all trivagos route
-router.get('/',optAuth,hotelController.GetAllHotels);
+router.get('/', cacheMiddleware(300000), optAuth, hotelController.GetAllHotels); // Cache for 5 minutes
 
 /**
  * @swagger
@@ -91,12 +92,10 @@ router.get('/',optAuth,hotelController.GetAllHotels);
  *           type: string
  *     responses:
  *       200:
- *         description: Hotel found
- *       404:
- *         description: Hotel not found
+ *         description: Hotel details
  */
 //get hotel by id route
-router.get('/:id',optAuth,hotelController.GetHotel);
+router.get('/:id', cacheMiddleware(300000), optAuth, hotelController.GetHotel); // Cache for 5 minutes
 
 /**
  * @swagger

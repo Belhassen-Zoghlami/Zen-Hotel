@@ -57,4 +57,11 @@ const hotelSchema = new mongoose.Schema
     }
 );
 
+// Add indexes for frequently queried fields
+hotelSchema.index({ location: 1 });
+hotelSchema.index({ owner: 1 });
+hotelSchema.index({ rating: 1 });
+hotelSchema.index({ name: 'text', description: 'text' }); // Text search index
+hotelSchema.index({ 'coordinates.latitude': 1, 'coordinates.longitude': 1 }); // Geospatial index
+
 module.exports = mongoose.model('Hotel',hotelSchema);

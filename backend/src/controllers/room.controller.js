@@ -2,6 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const Room = require('../models/room.model');
 const Hotel = require('../models/hotel.model');
+const { clearCache } = require('../middleware/cache.middleware');
 const mongoose = require('mongoose');
 
 const IMAGE_ROOT = path.resolve(__dirname, '../../images');
@@ -47,23 +48,22 @@ exports.CreateRoom = async(req,res) =>
                 })
                 : [];
 
-            const room = await Room.create
-            
-            (
-                {
-                    hotel: req.params.hotelId,
-                    images: imagePaths,
-                    roomNumber: req.body.roomNumber,
-                    type: req.body.type,
-                    capacity: req.body.capacity,
-                    pricePerNight: mongoose.Types.Decimal128.fromString(req.body.pricePerNight.toString()),
-                    amenities: req.body.amenities,
-                    description: req.body.description,
-                    isAvailable: req.body.isAvailable,
-                }
-            );
+            const room = await Room.create({
+                hotel: req.params.hotelId,
+                images: imagePaths,
+                roomNumber: req.body.roomNumber,
+                type: req.body.type,
+                capacity: req.body.capacity,
+                pricePerNight: req.body.pricePerNight,
+                amenities: req.body.amenities || [],
+                description: req.body.description,
+                isAvailable: req.body.isAvailable
+            });
 
-            res.status(201).json({room});
+            // Clear cache when room is created
+            clearCache('/api/Room');
+
+            res.status(201).json({ room });
         }
         catch(err)
         {
@@ -119,6 +119,10 @@ exports.UpdateRoom = async (req,res)=>
         if (req.body.isAvailable !== undefined) room.isAvailable=req.body.isAvailable;
 
         await room.save()
+        
+        // Clear cache when room is updated
+        clearCache('/api/Room');
+        
         res.json({message: 'room updated successfully'});
     }
     catch(err)
@@ -162,6 +166,10 @@ exports.DeleteRoom = async (req,res) =>
 
         await deleteImagesFromDisk(room.images);
         await room.deleteOne();
+        
+        // Clear cache when room is deleted
+        clearCache('/api/Room');
+        
         res.json({message: 'room deleted successfully'})
     }
     catch(err)
