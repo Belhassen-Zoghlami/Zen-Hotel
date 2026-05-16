@@ -1,9 +1,8 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const auth = require('../middleware/auth.middleware');
-const reqRole = require('../middleware/role.middleware');
-const adminController = require('../controllers/admin.controller');
-
+const auth = require("../middleware/auth.middleware");
+const reqRole = require("../middleware/role.middleware");
+const adminController = require("../controllers/admin.controller");
 
 /**
  * @swagger
@@ -24,13 +23,7 @@ const adminController = require('../controllers/admin.controller');
  *       200:
  *         description: List of users
  */
-router.get(
-
-    '/users',
-    auth,
-    reqRole('admin'),
-    adminController.getAllUsers
-);
+router.get("/users", auth, reqRole("admin"), adminController.getAllUsers);
 
 /**
  * @swagger
@@ -50,13 +43,7 @@ router.get(
  *       200:
  *         description: User found
  */
-router.get(
-    '/users/:userId',
-    auth,
-    reqRole('admin'),
-    adminController.getUser
-);
-
+router.get("/users/:userId", auth, reqRole("admin"), adminController.getUser);
 
 /**
  * @swagger
@@ -77,9 +64,10 @@ router.get(
  *         description: User deleted
  */
 router.delete(
-    'users/:userId',
-    auth,reqRole('admin'),
-    adminController.deleteUser
+  "/users/:userId",
+  auth,
+  reqRole("admin"),
+  adminController.deleteUser,
 );
 
 /**
@@ -101,10 +89,10 @@ router.delete(
  *         description: Owner validated
  */
 router.patch(
-    '/users/validate-owner/:userId',
-    auth,
-    reqRole('admin'),
-    adminController.validateOwner
+  "/users/validate-owner/:userId",
+  auth,
+  reqRole("admin"),
+  adminController.validateOwner,
 );
 
 /**
@@ -126,10 +114,10 @@ router.patch(
  *         description: User status toggled
  */
 router.patch(
-    '/users/toggle-user/:userId',
-    auth,
-    reqRole('admin'),
-    adminController.toggleUserStatus
+  "/users/toggle-user/:userId",
+  auth,
+  reqRole("admin"),
+  adminController.toggleUserStatus,
 );
 
 module.exports = router;
