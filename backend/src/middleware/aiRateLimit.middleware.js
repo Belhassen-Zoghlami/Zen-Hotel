@@ -1,13 +1,10 @@
 /**
  * AI Rate Limit Middleware
  *
- * Three-layer guard that keeps our usage safely inside Gemini's free tier:
+ * Application-level guard that prevents abuse of the AI recommendation
+ * endpoint regardless of which LLM provider is behind it.
  *
- *  Gemini free-tier hard limits (gemini-2.0-flash):
- *    • 15 requests / minute  (global across all users)
- *    • 1 500 requests / day  (global across all users)
- *
- *  Our own limits (applied before hitting Gemini):
+ *  Our own limits (applied before hitting the LLM):
  *  ┌──────────────────────────────────────────────────────────────┐
  *  │  Per-IP daily     │  30 req / IP / day   (midnight UTC)     │
  *  │  Per-IP minute    │   3 req / IP / min   (sliding window)   │
@@ -15,12 +12,9 @@
  *  │  Global minute    │  12 req / min        (sliding window)   │
  *  └──────────────────────────────────────────────────────────────┘
  *
- *  The global-minute limit (12) is set at 80 % of Gemini's 15 RPM ceiling,
- *  leaving headroom so we never actually hit Gemini's own rate limiter.
- *
- *  When Gemini itself reports RESOURCE_EXHAUSTED the circuit breaker in
- *  ai.service.js opens and callers fall through to rule-based responses
- *  without consuming a user's quota slot.
+ *  When the LLM itself reports a rate-limit or quota exhaustion the
+ *  circuit breaker in ai.service.js opens and callers fall through to
+ *  rule-based responses without consuming a user's quota slot.
  *
  * Uses a plain in-memory store — no external dependencies needed.
  */
@@ -32,7 +26,7 @@
 const IP_DAILY_LIMIT = 30; // per IP per day
 const IP_MINUTE_LIMIT = 3; // per IP per minute  (sliding)
 const GLOBAL_DAILY_LIMIT = 1400; // whole server per day
-const GLOBAL_MINUTE_LIMIT = 12; // whole server per minute (80 % of Gemini's 15 RPM)
+const GLOBAL_MINUTE_LIMIT = 12; // whole server per minute
 
 const MS_PER_MINUTE = 60 * 1000;
 
@@ -177,7 +171,7 @@ function aiRateLimitMiddleware(req, res, next) {
 
   // ── Evaluate limits (cheapest / most-likely-to-fire first) ────────────────
 
-  // 1. Global minute cap  — protects Gemini's 15 RPM ceiling
+  // 1. Global minute cap  — protects the upstream LLM provider
   if (globalStore.minuteLog.length >= GLOBAL_MINUTE_LIMIT) {
     const oldest = globalStore.minuteLog[0];
     const retryAfter = Math.max(

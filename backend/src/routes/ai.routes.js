@@ -10,7 +10,7 @@ const aiController = require("../controllers/ai.controller");
  * @swagger
  * tags:
  *   name: AI Recommendations
- *   description: AI-powered hotel recommendations (Gemini 1.5 Flash + rule-based fallback)
+ *   description: AI-powered hotel recommendations (OpenCode Zen + rule-based fallback)
  */
 
 /**
@@ -62,7 +62,7 @@ router.post(
  *     tags: [AI Recommendations]
  *     responses:
  *       200:
- *         description: AI service status including Gemini availability and rate limits
+ *         description: AI service status including Zen availability and rate limits
  */
 router.get("/health", aiController.healthCheck);
 

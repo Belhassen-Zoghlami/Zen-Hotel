@@ -1,141 +1,109 @@
 "use strict";
 
 const Hotel = require("../models/hotel.model");
+const Room = require("../models/room.model");
 
-// ─── Gemini SDK (optional — only used when GEMINI_API_KEY is present) ─────────
-// Uses the new unified @google/genai SDK (supports Gemini 2.0+)
-let GoogleGenAI;
-try {
-  ({ GoogleGenAI } = require("@google/genai"));
-} catch (_) {
-  // Package not yet installed; AI features will use the rule-based fallback
-  GoogleGenAI = null;
-}
+// ─── Zen API client (OpenAI-compatible) ──────────────────────────────────────
+// Endpoint : https://opencode.ai/zen/v1/chat/completions
+// Auth     : Bearer token via ZEN_API_KEY env var
+// Model    : configured via ZEN_MODEL env var (default: opencode/gpt-5.3-codex)
+// Fallback : Fully rule-based logic when Zen is unavailable or the call fails
 
-/**
- * AI Service for Hotel Recommendations
- *
- * Primary path  : Google Gemini 2.0 Flash (free tier) via GEMINI_API_KEY
- *                 Uses the new @google/genai SDK.
- * Fallback path : Fully rule-based logic (extractPreferences + scoreHotels
- *                 + generateResponse) — used when the key is absent or any
- *                 Gemini call throws.
- *
- * Model: gemini-2.0-flash  — free-tier stable, 1 500 req/day on AI Studio
- */
+const ZEN_BASE_URL = "https://opencode.ai/zen/v1";
+
 class AIService {
   constructor() {
-    this.ai = null; // GoogleGenAI client instance
-    this.geminiModel = null; // model name string
-    this._backoffUntil = 0; // epoch ms — Gemini blocked until this time
-    this._backoffReason = null; // 'minute' | 'daily' | null
-    this._initGemini();
+    this.apiKey = null;
+    this.zenModel = null;
+    this._backoffUntil = 0;
+    this._backoffReason = null;
+    this._initZen();
   }
 
-  // ─── Gemini initialisation ────────────────────────────────────────────────
+  // ─── Zen initialisation ──────────────────────────────────────────────────
 
-  _initGemini() {
-    const apiKey = process.env.GEMINI_API_KEY;
+  _initZen() {
+    const apiKey = process.env.ZEN_API_KEY;
     if (!apiKey) {
       console.info(
-        "[AIService] GEMINI_API_KEY not set — running in rule-based fallback mode.",
+        "[AIService] ZEN_API_KEY not set — running in rule-based fallback mode.",
       );
       return;
     }
-    if (!GoogleGenAI) {
-      console.warn(
-        "[AIService] @google/genai package not installed — running in fallback mode.",
-      );
-      return;
-    }
-    try {
-      this.ai = new GoogleGenAI({ apiKey });
-      this.geminiModel = "gemini-2.0-flash"; // free-tier stable model
-      console.info(
-        `[AIService] Gemini initialised with model: ${this.geminiModel}`,
-      );
-    } catch (err) {
-      console.error(
-        "[AIService] Failed to initialise Gemini client:",
-        err.message,
-      );
-      this.ai = null;
-      this.geminiModel = null;
-    }
+    this.apiKey = apiKey;
+    this.zenModel = process.env.ZEN_MODEL || "gpt-5.3-codex";
+    console.info(
+      `[AIService] Zen initialised with model: ${this.zenModel}`,
+    );
   }
 
-  /** True when Gemini is configured and the circuit breaker is not open. */
-  get _geminiEnabled() {
-    if (this.ai === null || this.geminiModel === null) return false;
+  get _zenEnabled() {
+    if (this.apiKey === null || this.zenModel === null) return false;
     if (Date.now() < this._backoffUntil) return false;
-    // Reset backoff state once the window has passed
     this._backoffUntil = 0;
     this._backoffReason = null;
     return true;
   }
 
-  /**
-   * Parse a Google RESOURCE_EXHAUSTED error and engage the circuit breaker.
-   * Returns the retryAfter value in seconds (or a sensible default).
-   */
-  _handleGeminiQuotaError(err) {
-    let retryAfterSec = 60; // safe default
+  async _callZen(messages) {
+    const response = await fetch(`${ZEN_BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: this.zenModel,
+        messages,
+        max_tokens: 2000,
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      let parsed;
+      try {
+        parsed = JSON.parse(body);
+      } catch {
+        parsed = null;
+      }
+      const err = new Error(
+        parsed?.error?.message || `Zen API error: ${response.status}`,
+      );
+      err.status = response.status;
+      err.body = parsed;
+      throw err;
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content ?? "";
+  }
+
+  _handleZenError(err) {
+    let retryAfterSec = 60;
     let reason = "minute";
 
-    try {
-      // The error message is a JSON string when it comes from @google/genai
-      const body =
-        typeof err.message === "string" && err.message.startsWith("{")
-          ? JSON.parse(err.message)
-          : (err.errorDetails ?? null);
-
-      if (body?.error) {
-        const details = body.error.details ?? [];
-
-        // Extract retryDelay from RetryInfo detail
-        for (const d of details) {
-          if (d["@type"]?.includes("RetryInfo") && d.retryDelay) {
-            const parsed = parseInt(d.retryDelay, 10);
-            if (!isNaN(parsed)) retryAfterSec = parsed + 5; // add 5 s buffer
-            break;
-          }
-        }
-
-        // Determine if this is a daily exhaustion
-        const msg = body.error.message ?? "";
-        const violations =
-          details.find((d) => d["@type"]?.includes("QuotaFailure"))
-            ?.violations ?? [];
-        const isDaily =
-          violations.some((v) => v.quotaId?.toLowerCase().includes("perday")) ||
-          msg.toLowerCase().includes("per day");
-
-        if (isDaily) {
-          // Daily quota blown — block for the rest of the day
-          const now = new Date();
-          // Gemini resets at midnight Pacific (UTC-7 or UTC-8); use UTC midnight as close proxy
-          const midnightUTC = new Date(
-            Date.UTC(
-              now.getUTCFullYear(),
-              now.getUTCMonth(),
-              now.getUTCDate() + 1,
-            ),
-          );
-          retryAfterSec = Math.ceil(
-            (midnightUTC.getTime() - Date.now()) / 1000,
-          );
-          reason = "daily";
-        }
+    if (err.status === 429) {
+      if (err.body?.error?.details?.retryAfter) {
+        retryAfterSec = parseInt(err.body.error.details.retryAfter, 10) + 5;
       }
-    } catch (_) {
-      /* parsing failed — use defaults */
+      const msg = (err.body?.error?.message ?? "").toLowerCase();
+      if (msg.includes("day") || msg.includes("daily")) {
+        reason = "daily";
+        const now = new Date();
+        const midnightUTC = new Date(
+          Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1),
+        );
+        retryAfterSec = Math.ceil((midnightUTC.getTime() - Date.now()) / 1000);
+      }
     }
 
     this._backoffUntil = Date.now() + retryAfterSec * 1000;
     this._backoffReason = reason;
 
     console.warn(
-      `[AIService] Gemini quota exhausted (${reason}). Circuit breaker open for ${retryAfterSec}s ` +
+      `[AIService] Zen API rate-limited (${reason}). Circuit breaker open for ${retryAfterSec}s ` +
         `(until ${new Date(this._backoffUntil).toISOString()}).`,
     );
 
@@ -144,15 +112,11 @@ class AIService {
 
   // ─── Public status ────────────────────────────────────────────────────────
 
-  /**
-   * Returns service metadata used by the health-check endpoint.
-   * @returns {{ aiEnabled: boolean, model: string }}
-   */
   getStatus() {
-    const backingOff = this.ai !== null && Date.now() < this._backoffUntil;
+    const backingOff = this.apiKey !== null && Date.now() < this._backoffUntil;
     return {
-      aiEnabled: this._geminiEnabled,
-      model: this.geminiModel ?? "rule-based-fallback",
+      aiEnabled: this._zenEnabled,
+      model: this.zenModel ?? "rule-based-fallback",
       backingOff,
       backoffUntil: backingOff
         ? new Date(this._backoffUntil).toISOString()
@@ -161,16 +125,136 @@ class AIService {
     };
   }
 
-  // ─── Preference extraction (rule-based, kept 100 % intact) ───────────────
+  // ─── Geospatial helpers ───────────────────────────────────────────────────
 
   /**
-   * Extract user preferences from natural language input.
-   * @param {string} userMessage
-   * @returns {Promise<Object>}
+   * Haversine distance between two lat/lng points in kilometres.
    */
+  _haversineKm(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  /**
+   * Geocode a place name via OpenStreetMap's free Nominatim API.
+   * Returns { lat, lng, displayName } or null.
+   */
+  async _geocodeLocation(locationName) {
+    const url =
+      `https://nominatim.openstreetmap.org/search?` +
+      `q=${encodeURIComponent(locationName)}&format=json&limit=1`;
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "ZenHotels/1.0" },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data || data.length === 0) return null;
+      return {
+        lat: parseFloat(data[0].lat),
+        lng: parseFloat(data[0].lon),
+        displayName: data[0].display_name,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Sort hotels by real-world distance to a target coordinate.
+   * Returns hotels annotated with `distanceKm` and `matchScore` based on proximity.
+   */
+  _findClosestByCoordinates(targetLat, targetLng, hotels, limit = 2) {
+    const withDistance = hotels
+      .filter((h) => h.coordinates?.latitude != null && h.coordinates?.longitude != null)
+      .map((h) => {
+        const dist = this._haversineKm(
+          targetLat,
+          targetLng,
+          h.coordinates.latitude,
+          h.coordinates.longitude,
+        );
+        return { ...h.toObject(), distanceKm: Math.round(dist * 100) / 100 };
+      })
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+
+    // Assign matchScore inversely: closest hotel gets 100, then decreasing
+    if (withDistance.length > 0) {
+      const maxDist = withDistance[withDistance.length - 1].distanceKm;
+      const minDist = withDistance[0].distanceKm;
+      const range = maxDist - minDist || 1;
+      withDistance.forEach((h) => {
+        h.matchScore = Math.round(100 - ((h.distanceKm - minDist) / range) * 90);
+      });
+    }
+
+    return withDistance.slice(0, limit);
+  }
+
+  // ─── Room data enrichment ─────────────────────────────────────────────────
+
+  /**
+   * For each hotel, fetch its cheapest available room, total room count,
+   * and available room count. Attaches `cheapestPrice`, `roomCount`,
+   * `availableRooms` to each hotel object.
+   */
+  async _enrichWithRoomData(hotels) {
+    if (hotels.length === 0) return hotels;
+
+    const hotelIds = hotels.map((h) => h._id);
+
+    // Aggregate: total rooms, available rooms, and minimum price per hotel
+    const roomStats = await Room.aggregate([
+      { $match: { hotel: { $in: hotelIds } } },
+      {
+        $group: {
+          _id: "$hotel",
+          totalRooms: { $sum: 1 },
+          availableRooms: {
+            $sum: { $cond: ["$isAvailable", 1, 0] },
+          },
+          cheapestPrice: { $min: "$pricePerNight" },
+        },
+      },
+    ]);
+
+    const statsMap = {};
+    for (const stat of roomStats) {
+      statsMap[String(stat._id)] = {
+        totalRooms: stat.totalRooms,
+        availableRooms: stat.availableRooms,
+        cheapestPrice: stat.cheapestPrice
+          ? parseFloat(stat.cheapestPrice.$numberDecimal ?? stat.cheapestPrice.toString())
+          : null,
+      };
+    }
+
+    return hotels.map((h) => {
+      const id = String(h._id);
+      const stats = statsMap[id];
+      return {
+        ...h,
+        roomCount: stats?.totalRooms ?? 0,
+        availableRooms: stats?.availableRooms ?? 0,
+        cheapestPrice: stats?.cheapestPrice ?? null,
+      };
+    });
+  }
+
+  // ─── Preference extraction (rule-based) ───────────────────────────────────
+
   async extractPreferences(userMessage) {
     const preferences = {
       location: null,
+      coordinates: null,
+      proximityIntent: false,
       minRating: null,
       maxRating: null,
       keywords: [],
@@ -182,19 +266,29 @@ class AIService {
 
     const message = userMessage.toLowerCase();
 
+    // ── Proximity intent ────────────────────────────────────────────────────
+    preferences.proximityIntent =
+      message.includes("closest") ||
+      message.includes("nearest") ||
+      message.includes("closer") ||
+      message.includes("close to") ||
+      /which.*(?:hotel|one).*closest/.test(message);
+
     // ── Location ─────────────────────────────────────────────────────────────
     const locationPatterns = [
-      /(?:in|at|near|around|close to|by)\s+([a-z\s]+?)(?:,|;|\s|$|hotel|with|that|and)/i,
-      /([a-z\s]+?)\s+(?:hotel|city|place|area|location)/i,
-      /looking\s+(?:for|in)\s+([a-z\s]+?)(?:,|;|\s|$)/i,
+      /(?:in|at|near|around|close to|closest to|by)\s+([a-z\s]{2,}?)(?:\s+(?:hotel|with|that|and|has|have|is|was|for|but|or|of|the|a|an|in|at|near|by|show|looking|want|need|would|please|tell|find|give|recommend|suggest|search|browse|filter|sort|list)|,|;|$)/i,
+      /([a-z]{3,}(?:\s+[a-z]{3,})*)\s+(?:hotel|city|place|area|location)/i,
+      /looking\s+(?:for|in)\s+([a-z\s]{2,}?)(?:\s+(?:hotel|with|that|and|has|have|is|was|for|but|or|of|the|a|an|in|at|near|by|show|looking|want|need|would|please|tell|find|give|recommend|suggest|search|browse|filter|sort|list)|,|;|$)/i,
     ];
 
     for (const pattern of locationPatterns) {
       const match = message.match(pattern);
       if (match && match[1]) {
         let location = match[1].trim();
-        location = location.replace(/^(a|an|the|near|in|at)\s+/i, "");
-        if (location.length > 2) {
+        while (/^(a|an|the|near|in|at|i|we|they|he|she|it|you|want|need|would|looking|find|show|give|tell|like|prefer|have|has|with|for)\s+/i.test(location)) {
+          location = location.replace(/^(a|an|the|near|in|at|i|we|they|he|she|it|you|want|need|would|looking|find|show|give|tell|like|prefer|have|has|with|for)\s+/i, "");
+        }
+        if (location.length > 2 && !/^(want|need|would|looking|find|show|give|tell|like|prefer|have|has|hotel|pool|beach|spa|gym|wifi|budget|luxury|cheap)$/i.test(location)) {
           preferences.location = location;
           break;
         }
@@ -454,20 +548,13 @@ class AIService {
     return preferences;
   }
 
-  // ─── Scoring (rule-based, kept 100 % intact) ──────────────────────────────
+  // ─── Scoring (string-based) ───────────────────────────────────────────────
 
-  /**
-   * Score and sort hotels according to extracted preferences.
-   * @param {Array} hotels
-   * @param {Object} preferences
-   * @returns {Array}
-   */
   scoreHotels(hotels, preferences) {
     return hotels
       .map((hotel) => {
         let score = 0;
 
-        // Location match (highest weight)
         if (preferences.location && hotel.location) {
           const hotelLocation = hotel.location.toLowerCase();
           const userLocation = preferences.location.toLowerCase();
@@ -479,7 +566,6 @@ class AIService {
           }
         }
 
-        // Rating match with range support
         if (preferences.minRating && hotel.rating) {
           const hotelRating = parseFloat(hotel.rating);
           if (hotelRating >= preferences.minRating) {
@@ -491,7 +577,6 @@ class AIService {
           }
         }
 
-        // Keyword / description match
         if (preferences.keywords.length > 0 && hotel.description) {
           const description = hotel.description.toLowerCase();
           for (const keyword of preferences.keywords) {
@@ -502,7 +587,6 @@ class AIService {
           }
         }
 
-        // Negative keyword penalties
         if (preferences.negativeKeywords.length > 0 && hotel.description) {
           const description = hotel.description.toLowerCase();
           for (const negativeKeyword of preferences.negativeKeywords) {
@@ -510,14 +594,12 @@ class AIService {
           }
         }
 
-        // Budget preference
         if (preferences.budget === "low" && hotel.rating) {
           if (parseFloat(hotel.rating) <= 3) score += 10;
         } else if (preferences.budget === "high" && hotel.rating) {
           if (parseFloat(hotel.rating) >= 4) score += 10;
         }
 
-        // Amenities matching
         if (preferences.amenities.length > 0 && hotel.description) {
           const description = hotel.description.toLowerCase();
           for (const amenity of preferences.amenities) {
@@ -530,16 +612,8 @@ class AIService {
       .sort((a, b) => b.matchScore - a.matchScore);
   }
 
-  // ─── Rule-based response generator (kept 100 % intact) ───────────────────
+  // ─── Response generators ──────────────────────────────────────────────────
 
-  /**
-   * Build a natural-language response purely from rule-based logic.
-   * Used when Gemini is unavailable or fails.
-   * @param {string} userMessage
-   * @param {Object} preferences
-   * @param {Array}  recommendations
-   * @returns {string}
-   */
   generateResponse(userMessage, preferences, recommendations) {
     if (recommendations.length === 0) {
       let noMatchResponse =
@@ -555,75 +629,96 @@ class AIService {
       return noMatchResponse;
     }
 
-    let response = "Based on your preferences";
+    const isProximity = recommendations.some((h) => h.distanceKm != null);
 
-    const preferenceParts = [];
-    if (preferences.location)
-      preferenceParts.push(`hotels in ${preferences.location}`);
-
-    if (preferences.minRating) {
-      preferenceParts.push(
-        preferences.maxRating
-          ? `rating between ${preferences.minRating} and ${preferences.maxRating} stars`
-          : `at least ${preferences.minRating} stars`,
-      );
-    }
-
-    if (preferences.amenities.length > 0) {
-      const amenityNames = {
-        luxury: "luxury amenities",
-        budget: "budget-friendly options",
-        beach: "beach access",
-        city: "city center location",
-        quiet: "quiet atmosphere",
-        family: "family-friendly features",
-        business: "business facilities",
-        romantic: "romantic setting",
-        spa: "spa services",
-        pool: "swimming pool",
-        gym: "fitness center",
-        restaurant: "on-site restaurant",
-        wifi: "WiFi access",
-        parking: "parking",
-        pet: "pet-friendly",
-        accessible: "accessibility features",
-        view: "great views",
-        air: "air conditioning",
-        breakfast: "breakfast included",
-      };
-      const amenityList = preferences.amenities.map(
-        (a) => amenityNames[a] || a,
-      );
-      preferenceParts.push(amenityList.join(", "));
-    }
-
-    if (preferences.negativeKeywords.length > 0) {
-      preferenceParts.push(
-        `without ${preferences.negativeKeywords.join(", ")}`,
-      );
-    }
-
-    if (preferences.priceRange.min || preferences.priceRange.max) {
-      if (preferences.priceRange.min && preferences.priceRange.max) {
-        preferenceParts.push(
-          `price range between $${preferences.priceRange.min} and $${preferences.priceRange.max}`,
-        );
-      } else if (preferences.priceRange.max) {
-        preferenceParts.push(`under $${preferences.priceRange.max}`);
-      } else if (preferences.priceRange.min) {
-        preferenceParts.push(`above $${preferences.priceRange.min}`);
+    let response;
+    if (isProximity) {
+      const closest = recommendations[0];
+      response = `The closest hotel to your location is **${closest.name}** in ${closest.location}`;
+      if (closest.distanceKm != null) {
+        response += `, approximately **${closest.distanceKm} km** away`;
       }
-    }
+      response += `.\n\nHere are the closest options:\n\n`;
+    } else {
+      response = "Based on your preferences";
 
-    if (preferenceParts.length > 0)
-      response += ` for ${preferenceParts.join(", ")}`;
-    response += ", I found these great options for you:\n\n";
+      const preferenceParts = [];
+      if (preferences.location)
+        preferenceParts.push(`hotels in ${preferences.location}`);
+
+      if (preferences.minRating) {
+        preferenceParts.push(
+          preferences.maxRating
+            ? `rating between ${preferences.minRating} and ${preferences.maxRating} stars`
+            : `at least ${preferences.minRating} stars`,
+        );
+      }
+
+      if (preferences.amenities.length > 0) {
+        const amenityNames = {
+          luxury: "luxury amenities",
+          budget: "budget-friendly options",
+          beach: "beach access",
+          city: "city center location",
+          quiet: "quiet atmosphere",
+          family: "family-friendly features",
+          business: "business facilities",
+          romantic: "romantic setting",
+          spa: "spa services",
+          pool: "swimming pool",
+          gym: "fitness center",
+          restaurant: "on-site restaurant",
+          wifi: "WiFi access",
+          parking: "parking",
+          pet: "pet-friendly",
+          accessible: "accessibility features",
+          view: "great views",
+          air: "air conditioning",
+          breakfast: "breakfast included",
+        };
+        const amenityList = preferences.amenities.map(
+          (a) => amenityNames[a] || a,
+        );
+        preferenceParts.push(amenityList.join(", "));
+      }
+
+      if (preferences.negativeKeywords.length > 0) {
+        preferenceParts.push(
+          `without ${preferences.negativeKeywords.join(", ")}`,
+        );
+      }
+
+      if (preferences.priceRange.min || preferences.priceRange.max) {
+        if (preferences.priceRange.min && preferences.priceRange.max) {
+          preferenceParts.push(
+            `price range between $${preferences.priceRange.min} and $${preferences.priceRange.max}`,
+          );
+        } else if (preferences.priceRange.max) {
+          preferenceParts.push(`under $${preferences.priceRange.max}`);
+        } else if (preferences.priceRange.min) {
+          preferenceParts.push(`above $${preferences.priceRange.min}`);
+        }
+      }
+
+      if (preferenceParts.length > 0)
+        response += ` for ${preferenceParts.join(", ")}`;
+      response += ", I found these great options for you:\n\n";
+    }
 
     recommendations.forEach((hotel, index) => {
       response += `${index + 1}. **${hotel.name}** in ${hotel.location}\n`;
-      response += `   Rating: ${hotel.rating} stars`;
-      if (hotel.matchScore)
+      response += `   Rating: ${hotel.rating}`;
+      if (hotel.distanceKm != null) {
+        response += ` | ${hotel.distanceKm} km away`;
+      } else if (hotel.matchScore) {
         response += ` | Match: ${Math.round(hotel.matchScore)}%`;
+      }
+      if (hotel.cheapestPrice > 0) {
+        response += ` | From $${hotel.cheapestPrice}/night`;
+      }
+      if (hotel.availableRooms > 0) {
+        response += ` | ${hotel.availableRooms} room${hotel.availableRooms !== 1 ? "s" : ""} available`;
+      }
       response += "\n";
       if (hotel.description)
         response += `   ${hotel.description.substring(0, 120)}...\n`;
@@ -635,17 +730,23 @@ class AIService {
     return response;
   }
 
-  // ─── Gemini prompt builder ────────────────────────────────────────────────
+  // ─── Zen prompt builders ──────────────────────────────────────────────────
 
-  /**
-   * Builds the recommendation prompt sent to Gemini.
-   * @param {string} userMessage
-   * @param {Array}  topHotels      – top 5 scored hotels
-   * @returns {string}
-   */
-  _buildRecommendationPrompt(userMessage, topHotels) {
+  _buildRecommendationMessages(userMessage, topHotels) {
     const hotelList = topHotels
       .map((h, i) => {
+        const dist =
+          h.distanceKm != null
+            ? ` | ${h.distanceKm} km from your location`
+            : "";
+        const price =
+          h.cheapestPrice != null
+            ? ` | From $${h.cheapestPrice}/night`
+            : "";
+        const avail =
+          h.availableRooms != null
+            ? ` | ${h.availableRooms} rooms available`
+            : "";
         const score =
           h.matchScore != null
             ? ` (match score: ${Math.round(h.matchScore)})`
@@ -654,14 +755,14 @@ class AIService {
           ? h.description.substring(0, 200)
           : "No description available.";
         return [
-          `${i + 1}. ${h.name} — ${h.location}`,
+          `${i + 1}. ${h.name} — ${h.location}${dist}${price}${avail}`,
           `   Rating   : ${h.rating ?? "N/A"} / 5${score}`,
           `   Overview : ${desc}`,
         ].join("\n");
       })
       .join("\n\n");
 
-    return `You are a warm, knowledgeable hotel concierge assistant.
+    const systemPrompt = `You are a warm, knowledgeable hotel concierge assistant.
 
 A guest has asked: "${userMessage}"
 
@@ -671,23 +772,31 @@ ${hotelList}
 
 Please write a friendly, helpful recommendation response in 2-4 paragraphs:
 - Address the guest's specific request directly in the opening sentence.
+- If the guest asked about the closest hotel, lead with the nearest option and mention the distance.
 - Reference the hotels by name and explain clearly why each one fits what the guest is looking for.
-- Highlight standout features (location, rating, special amenities) relevant to their request.
+- Highlight standout features (location, rating, special amenities, pricing) relevant to their request.
 - Close with an invitation to ask follow-up questions or request more details about any specific hotel.
 - Keep the tone conversational, helpful, and enthusiastic — but concise.
 - Do NOT invent information that isn't in the hotel data above.`;
+
+    return [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userMessage },
+    ];
   }
 
-  /**
-   * Builds the follow-up prompt sent to Gemini in chat mode.
-   * @param {Array}  previousRecommendations
-   * @param {string} followUpMessage
-   * @returns {{ systemPrompt: string, userTurn: string }}
-   */
-  _buildFollowUpPrompt(previousRecommendations, followUpMessage) {
+  _buildFollowUpMessages(previousRecommendations, followUpMessage) {
     const hotelList = previousRecommendations
       .slice(0, 5)
       .map((h, i) => {
+        const dist =
+          h.distanceKm != null
+            ? ` | ${h.distanceKm} km from your location`
+            : "";
+        const price =
+          h.cheapestPrice != null
+            ? ` | From $${h.cheapestPrice}/night`
+            : "";
         const score =
           h.matchScore != null
             ? ` (match score: ${Math.round(h.matchScore)})`
@@ -695,7 +804,7 @@ Please write a friendly, helpful recommendation response in 2-4 paragraphs:
         const desc = h.description
           ? h.description.substring(0, 150)
           : "No description available.";
-        return `${i + 1}. ${h.name} — ${h.location} | Rating: ${h.rating ?? "N/A"}/5${score}\n   ${desc}`;
+        return `${i + 1}. ${h.name} — ${h.location} | Rating: ${h.rating ?? "N/A"}/5${dist}${price}${score}\n   ${desc}`;
       })
       .join("\n\n");
 
@@ -705,51 +814,64 @@ Please write a friendly, helpful recommendation response in 2-4 paragraphs:
       `Answer any follow-up questions about these hotels helpfully and conversationally. ` +
       `Reference hotels by name. If the question requires a completely new search, say so politely.`;
 
-    return { systemPrompt, userTurn: followUpMessage };
+    return [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: followUpMessage },
+    ];
   }
 
   // ─── Main public methods ──────────────────────────────────────────────────
 
-  /**
-   * Get hotel recommendations for a user message.
-   * Uses Gemini when available, falls back to rule-based logic otherwise.
-   *
-   * @param {string} userMessage
-   * @returns {Promise<{
-   *   success        : boolean,
-   *   message        : string,
-   *   recommendations: Array,
-   *   preferences    : Object,
-   *   usingAI        : boolean,
-   * }>}
-   */
   async getRecommendations(userMessage) {
     try {
-      // Step 1: rule-based preference extraction
       const preferences = await this.extractPreferences(userMessage);
 
-      // Step 2: fetch & score all hotels
       const hotels = await Hotel.find().select(
         "-owner -createdAt -updatedAt -__v",
       );
-      const scoredHotels = this.scoreHotels(hotels, preferences);
-      const topRecommendations = scoredHotels
-        .filter((hotel) => hotel.matchScore > 0)
-        .slice(0, 5);
 
-      // Step 3: try Gemini
-      if (this._geminiEnabled) {
+      let topRecommendations = [];
+      let geocoded = null;
+
+      // Try coordinate-based proximity search when a location is mentioned
+      if (preferences.location || preferences.proximityIntent) {
+        const searchTerm = preferences.location || userMessage;
+        geocoded = await this._geocodeLocation(searchTerm);
+        if (geocoded) {
+          preferences.coordinates = { lat: geocoded.lat, lng: geocoded.lng };
+          topRecommendations = this._findClosestByCoordinates(
+            geocoded.lat,
+            geocoded.lng,
+            hotels,
+          );
+        }
+      }
+
+      // Fall back to string-based scoring when geocoding failed or no location
+      if (topRecommendations.length === 0) {
+        const scoredHotels = this.scoreHotels(hotels, preferences);
+        topRecommendations = scoredHotels
+          .filter((hotel) => hotel.matchScore > 0)
+          .slice(0, 2);
+      }
+
+      // Enrich with room data (prices, availability)
+      topRecommendations = await this._enrichWithRoomData(topRecommendations);
+
+      // Prefer hotels with available rooms, but keep at least one result
+      const withRooms = topRecommendations.filter((h) => h.availableRooms > 0);
+      if (withRooms.length > 0) {
+        topRecommendations = withRooms;
+      }
+
+      // Step 3: try Zen
+      if (this._zenEnabled) {
         try {
-          const prompt = this._buildRecommendationPrompt(
+          const messages = this._buildRecommendationMessages(
             userMessage,
             topRecommendations,
           );
-          const result = await this.ai.models.generateContent({
-            model: this.geminiModel,
-            contents: prompt,
-          });
-          const text = result.text;
-          // Successful call — clear any lingering backoff state
+          const text = await this._callZen(messages);
           this._backoffUntil = 0;
           this._backoffReason = null;
 
@@ -759,26 +881,28 @@ Please write a friendly, helpful recommendation response in 2-4 paragraphs:
             recommendations: topRecommendations,
             preferences,
             usingAI: true,
+            geocodedLocation: geocoded
+              ? { lat: geocoded.lat, lng: geocoded.lng, name: geocoded.displayName }
+              : null,
           };
-        } catch (geminiErr) {
+        } catch (zenErr) {
           const isQuotaError =
-            geminiErr.message?.includes("RESOURCE_EXHAUSTED") ||
-            geminiErr.message?.includes("429") ||
-            geminiErr.status === 429;
+            zenErr.status === 429 ||
+            zenErr.message?.includes("429") ||
+            zenErr.message?.includes("rate limit") ||
+            zenErr.message?.includes("quota");
 
           if (isQuotaError) {
-            this._handleGeminiQuotaError(geminiErr);
+            this._handleZenError(zenErr);
           } else {
             console.error(
-              "[AIService] Gemini generateContent failed, using fallback:",
-              geminiErr.message,
+              "[AIService] Zen API call failed, using fallback:",
+              zenErr.message,
             );
           }
-          // fall through to rule-based fallback below
         }
       }
 
-      // Step 4: rule-based fallback
       const fallbackMessage = this.generateResponse(
         userMessage,
         preferences,
@@ -790,6 +914,9 @@ Please write a friendly, helpful recommendation response in 2-4 paragraphs:
         recommendations: topRecommendations,
         preferences,
         usingAI: false,
+        geocodedLocation: geocoded
+          ? { lat: geocoded.lat, lng: geocoded.lng, name: geocoded.displayName }
+          : null,
       };
     } catch (error) {
       console.error("[AIService] getRecommendations error:", error);
@@ -797,44 +924,18 @@ Please write a friendly, helpful recommendation response in 2-4 paragraphs:
     }
   }
 
-  /**
-   * Handle a follow-up question in the context of previous recommendations.
-   * Uses Gemini chat mode when available, falls back to rule-based logic.
-   *
-   * @param {string} userMessage
-   * @param {Array}  previousRecommendations
-   * @returns {Promise<Object>}
-   */
   async handleFollowUp(userMessage, previousRecommendations) {
-    // ── Gemini chat path ───────────────────────────────────────────────────
     if (
-      this._geminiEnabled &&
+      this._zenEnabled &&
       previousRecommendations &&
       previousRecommendations.length > 0
     ) {
       try {
-        const { systemPrompt, userTurn } = this._buildFollowUpPrompt(
+        const messages = this._buildFollowUpMessages(
           previousRecommendations,
           userMessage,
         );
-
-        // New SDK: pass the full conversation as a contents array
-        const result = await this.ai.models.generateContent({
-          model: this.geminiModel,
-          contents: [
-            { role: "user", parts: [{ text: systemPrompt }] },
-            {
-              role: "model",
-              parts: [
-                {
-                  text: "Understood! I have the hotel recommendations in mind and I am ready to answer your follow-up questions.",
-                },
-              ],
-            },
-            { role: "user", parts: [{ text: userTurn }] },
-          ],
-        });
-        const text = result.text;
+        const text = await this._callZen(messages);
 
         return {
           success: true,
@@ -842,43 +943,47 @@ Please write a friendly, helpful recommendation response in 2-4 paragraphs:
           recommendations: previousRecommendations,
           usingAI: true,
         };
-      } catch (geminiErr) {
+      } catch (zenErr) {
         const isQuotaError =
-          geminiErr.message?.includes("RESOURCE_EXHAUSTED") ||
-          geminiErr.message?.includes("429") ||
-          geminiErr.status === 429;
+          zenErr.status === 429 ||
+          zenErr.message?.includes("429") ||
+          zenErr.message?.includes("rate limit") ||
+          zenErr.message?.includes("quota");
 
         if (isQuotaError) {
-          this._handleGeminiQuotaError(geminiErr);
+          this._handleZenError(zenErr);
         } else {
           console.error(
-            "[AIService] Gemini chat failed, using fallback:",
-            geminiErr.message,
+            "[AIService] Zen chat failed, using fallback:",
+            zenErr.message,
           );
         }
-        // fall through to rule-based fallback
       }
     }
 
-    // ── Rule-based follow-up fallback (original logic preserved) ─────────
     const message = userMessage.toLowerCase();
 
-    // More details about a specific hotel
     if (message.includes("more") && message.includes("detail")) {
       const hotelNumbers = message.match(/\d+/g);
       if (hotelNumbers && hotelNumbers.length > 0) {
         const index = parseInt(hotelNumbers[0]) - 1;
         if (previousRecommendations && previousRecommendations[index]) {
           const hotel = previousRecommendations[index];
+          let detail =
+            `Here are more details about **${hotel.name}**:\n\n` +
+            `Location: ${hotel.location}\n` +
+            `Rating: ${hotel.rating} stars\n`;
+          if (hotel.distanceKm != null) {
+            detail += `Distance: ${hotel.distanceKm} km from your location\n`;
+          } else {
+            detail += `Match Score: ${Math.round(hotel.matchScore)}%\n`;
+          }
+          detail +=
+            `Description: ${hotel.description || "No description available"}\n\n` +
+            "Would you like to see other hotels, book this one, or refine your search?";
           return {
             success: true,
-            message:
-              `Here are more details about **${hotel.name}**:\n\n` +
-              `Location: ${hotel.location}\n` +
-              `Rating: ${hotel.rating} stars\n` +
-              `Match Score: ${Math.round(hotel.matchScore)}%\n` +
-              `Description: ${hotel.description || "No description available"}\n\n` +
-              "Would you like to see other hotels, book this one, or refine your search?",
+            message: detail,
             recommendations: previousRecommendations,
             usingAI: false,
           };
@@ -886,7 +991,6 @@ Please write a friendly, helpful recommendation response in 2-4 paragraphs:
       }
     }
 
-    // Triggers that warrant a brand-new search
     const newSearchTriggers = [
       message.includes("with") ||
         message.includes("that has") ||
@@ -915,7 +1019,6 @@ Please write a friendly, helpful recommendation response in 2-4 paragraphs:
       return await this.getRecommendations(userMessage);
     }
 
-    // Comparison request
     if (
       message.includes("compare") ||
       message.includes("difference") ||
@@ -925,8 +1028,13 @@ Please write a friendly, helpful recommendation response in 2-4 paragraphs:
         let comparison = "Here's a comparison of the top hotels:\n\n";
         previousRecommendations.slice(0, 3).forEach((hotel, index) => {
           comparison += `${index + 1}. **${hotel.name}**\n`;
-          comparison += `   Rating: ${hotel.rating} stars | Match: ${Math.round(hotel.matchScore)}%\n`;
-          comparison += `   Location: ${hotel.location}\n\n`;
+          comparison += `   Rating: ${hotel.rating} stars`;
+          if (hotel.distanceKm != null) {
+            comparison += ` | ${hotel.distanceKm} km away`;
+          } else {
+            comparison += ` | Match: ${Math.round(hotel.matchScore)}%`;
+          }
+          comparison += `\n   Location: ${hotel.location}\n\n`;
         });
         comparison +=
           "Would you like more details about any of these, or shall I search for different options?";
@@ -939,12 +1047,17 @@ Please write a friendly, helpful recommendation response in 2-4 paragraphs:
       }
     }
 
-    // Top / best request
     if (message.includes("top") || message.includes("best")) {
       const topHotels = (previousRecommendations || []).slice(0, 3);
       let response = "Here are the top recommendations:\n\n";
       topHotels.forEach((hotel, index) => {
-        response += `${index + 1}. **${hotel.name}** — ${hotel.rating} stars (${Math.round(hotel.matchScore)}% match)\n`;
+        response += `${index + 1}. **${hotel.name}** — ${hotel.rating} stars`;
+        if (hotel.distanceKm != null) {
+          response += ` (${hotel.distanceKm} km away)`;
+        } else {
+          response += ` (${Math.round(hotel.matchScore)}% match)`;
+        }
+        response += "\n";
       });
       response += "\nWould you like more details about any of these?";
       return {
@@ -955,7 +1068,6 @@ Please write a friendly, helpful recommendation response in 2-4 paragraphs:
       };
     }
 
-    // Default: fresh recommendation search
     return await this.getRecommendations(userMessage);
   }
 }

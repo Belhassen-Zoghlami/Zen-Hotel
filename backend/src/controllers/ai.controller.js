@@ -82,7 +82,7 @@ exports.getRateLimitStatus = (req, res) => {
     success: true,
     ip,
     ...status,
-    // Gemini circuit-breaker state
+    // Zen circuit-breaker state
     backingOff: serviceStatus.backingOff,
     backoffUntil: serviceStatus.backoffUntil,
     backoffReason: serviceStatus.backoffReason,
