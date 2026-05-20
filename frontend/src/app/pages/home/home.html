@@ -7,24 +7,24 @@
       <p class="hero-sub">Luxury hotels, boutique stays and unique experiences</p>
 
       <!-- Search Bar -->
-      <div class="search-bar">
+      <form class="search-bar" (ngSubmit)="onSearch()">
         <div class="search-field">
           <i class="pi pi-map-marker"></i>
-          <input type="text" placeholder="Where are you going?" [(ngModel)]="searchCity" />
+          <input type="text" placeholder="Where are you going?" name="city" [(ngModel)]="searchCity" />
         </div>
         <div class="search-field">
           <i class="pi pi-calendar"></i>
-          <input type="date" [(ngModel)]="searchCheckIn" [min]="today" />
+          <input type="date" name="checkIn" [(ngModel)]="searchCheckIn" [min]="today" />
         </div>
         <div class="search-field">
           <i class="pi pi-calendar"></i>
-          <input type="date" [(ngModel)]="searchCheckOut" [min]="searchCheckIn || today" />
+          <input type="date" name="checkOut" [(ngModel)]="searchCheckOut" [min]="searchCheckIn || today" />
         </div>
-        <button class="btn-search" (click)="onSearch()">
+        <button type="submit" class="btn-search">
           <i class="pi pi-search"></i>
           Search
         </button>
-      </div>
+      </form>
     </div>
   </div>
 </section>

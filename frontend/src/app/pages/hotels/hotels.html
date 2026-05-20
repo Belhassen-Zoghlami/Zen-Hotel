@@ -7,6 +7,18 @@
       <p>Find your perfect stay</p>
     </div>
 
+    <!-- Active search summary -->
+    @if (cityFilter || searchCheckIn || searchCheckOut) {
+      <div class="search-summary">
+        <i class="pi pi-search"></i>
+        Searching:
+        @if (cityFilter) { <span class="summary-tag">{{ cityFilter }}</span> }
+        @if (searchCheckIn) { <span class="summary-tag">{{ searchCheckIn | date:'mediumDate' }}</span> }
+        @if (searchCheckOut) { <span class="summary-tag">{{ searchCheckOut | date:'mediumDate' }}</span> }
+        <a class="summary-clear" routerLink="/hotels">Clear</a>
+      </div>
+    }
+
     <!-- Filters -->
     <div class="filters-bar">
       <input

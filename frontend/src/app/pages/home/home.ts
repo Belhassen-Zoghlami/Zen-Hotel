@@ -68,6 +68,8 @@ export class Home implements OnInit {
   onSearch(): void {
     const params: any = {};
     if (this.searchCity.trim()) params['city'] = this.searchCity.trim();
+    if (this.searchCheckIn) params['checkIn'] = this.searchCheckIn;
+    if (this.searchCheckOut) params['checkOut'] = this.searchCheckOut;
     this.router.navigate(['/hotels'], { queryParams: params });
   }
 

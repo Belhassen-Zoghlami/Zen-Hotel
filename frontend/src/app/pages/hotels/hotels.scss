@@ -11,6 +11,39 @@
 
 .gold { color: var(--zen-gold); }
 
+.search-summary {
+  background: var(--zen-bg-secondary);
+  border: 1px solid var(--zen-border);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: var(--zen-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+
+  i { color: var(--zen-gold); }
+
+  .summary-tag {
+    background: color-mix(in srgb, var(--zen-gold) 15%, transparent);
+    color: var(--zen-gold);
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+  }
+
+  .summary-clear {
+    margin-left: auto;
+    color: var(--zen-text-muted);
+    text-decoration: none;
+    font-size: 0.8rem;
+    cursor: pointer;
+    &:hover { color: var(--zen-gold); }
+  }
+}
+
 .filters-bar {
   display: flex;
   gap: 1rem;
