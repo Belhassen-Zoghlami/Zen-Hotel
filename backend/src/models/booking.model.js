@@ -43,6 +43,19 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    paymentStatus: {
+      type: String,
+      enum: ['unpaid', 'paid', 'refunding', 'refunded'],
+      default: 'unpaid',
+    },
+    stripeSessionId: {
+      type: String,
+      default: null,
+    },
+    stripePaymentIntentId: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true }
 );

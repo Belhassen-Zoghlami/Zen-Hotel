@@ -41,6 +41,13 @@
       </div>
     </div>
 
+    <!-- Payment message banner -->
+    @if (paymentMessage) {
+      <div class="payment-message" [class.success]="paymentMessage.includes('successful')" [class.error]="paymentMessage.includes('failed') || paymentMessage.includes('cancelled')">
+        {{ paymentMessage }}
+      </div>
+    }
+
     <!-- Bookings List -->
     <div class="section-card">
       <h3>My Bookings</h3>
@@ -62,6 +69,7 @@
                 <th>Check Out</th>
                 <th>Total</th>
                 <th>Status</th>
+                <th>Payment</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -79,9 +87,24 @@
                     </span>
                   </td>
                   <td>
-                    @if (booking.status !== 'cancelled') {
+                    <span class="badge-payment {{ booking.paymentStatus }}">
+                      {{ booking.paymentStatus }}
+                    </span>
+                  </td>
+                  <td>
+                    @if (booking.status === 'confirmed' && booking.paymentStatus === 'unpaid') {
+                      <button class="btn-pay" [disabled]="paying" (click)="payNow(booking._id)">
+                        {{ paying ? 'Redirecting...' : 'Pay Now' }}
+                      </button>
+                    }
+                    @if (booking.status !== 'cancelled' && booking.status !== 'confirmed') {
                       <button class="btn-cancel" (click)="cancelBooking(booking._id)">
                         Cancel
+                      </button>
+                    }
+                    @if (booking.status === 'confirmed' && booking.paymentStatus === 'paid') {
+                      <button class="btn-cancel" (click)="cancelBooking(booking._id)">
+                        Cancel & Refund
                       </button>
                     }
                   </td>

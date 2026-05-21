@@ -13,6 +13,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const bookingRoutes = require('./routes/booking.routes');
 const aiRoutes = require('./routes/ai.routes');
+const paymentRoutes = require('./routes/payment.routes');
 const { cacheMiddleware } = require('./middleware/cache.middleware');
 
 // Compression middleware for all responses
@@ -40,5 +41,6 @@ app.use('/api/Hotel', hotelRoutes); // Add caching to hotel routes
 app.use('/api/Room', roomRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/payments', paymentRoutes);
 
 module.exports = app;

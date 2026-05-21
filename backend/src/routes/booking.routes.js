@@ -57,6 +57,24 @@ router.post('/', auth, reqRoles('client'), bookingController.createBooking);
 
 /**
  * @swagger
+ * /bookings/room/{roomId}/booked-dates:
+ *   get:
+ *     summary: Get all booked date ranges for a room (no auth)
+ *     tags: [Bookings]
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Array of booked date ranges
+ */
+router.get('/room/:roomId/booked-dates', bookingController.getRoomBookedDates);
+
+/**
+ * @swagger
  * /bookings/my:
  *   get:
  *     summary: Get all bookings of the logged-in client

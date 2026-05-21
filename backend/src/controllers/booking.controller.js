@@ -2,6 +2,7 @@ const Booking = require("../models/booking.model");
 const Room = require("../models/room.model");
 const Hotel = require("../models/hotel.model");
 const User = require("../models/user.model");
+const stripeService = require("../services/stripe.service");
 const {
   sendBookingRequestToOwner,
   sendBookingConfirmedToClient,
@@ -104,6 +105,20 @@ exports.createBooking = async (req, res) => {
   }
 };
 
+//                                                                  Get booked dates for a specific room (no auth)
+exports.getRoomBookedDates = async (req, res) => {
+  try {
+    const bookings = await Booking.find({
+      room: req.params.roomId,
+      status: { $ne: 'cancelled' },
+    }).select('checkIn checkOut');
+
+    res.json(bookings);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 //                                                                  Get client's bookings
 exports.getMyBookings = async (req, res) => {
   try {
@@ -148,6 +163,7 @@ exports.confirmBooking = async (req, res) => {
         .json({ message: "Only pending bookings can be confirmed" });
 
     booking.status = "confirmed";
+    booking.paymentStatus = "unpaid";
     await booking.save();
 
     // ── Notify the client by email (non-blocking) ─────────────────────────
@@ -195,6 +211,19 @@ exports.cancelBooking = async (req, res) => {
     booking.status = "cancelled";
     booking.cancelledBy = role;
     booking.cancelReason = cancelReason;
+
+    if (booking.paymentStatus === "paid" && booking.stripePaymentIntentId) {
+      booking.paymentStatus = "refunding";
+      await booking.save();
+      try {
+        await stripeService.refundPayment(booking.stripePaymentIntentId);
+        booking.paymentStatus = "refunded";
+      } catch (refundErr) {
+        console.error("[Booking] Refund failed:", refundErr.message);
+        booking.paymentStatus = "paid";
+      }
+    }
+
     await booking.save();
 
     // ── Notify the client by email only when an owner/admin cancels (non-blocking) ──

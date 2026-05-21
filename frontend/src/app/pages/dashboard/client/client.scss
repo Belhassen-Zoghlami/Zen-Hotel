@@ -98,6 +98,31 @@
   }
 }
 
+.badge-payment {
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: capitalize;
+  &.unpaid { background: rgba(245,158,11,.15); color: var(--zen-warning); }
+  &.paid { background: rgba(16,185,129,.15); color: var(--zen-success); }
+  &.refunding { background: rgba(59,130,246,.15); color: var(--zen-info); }
+  &.refunded { background: rgba(239,68,68,.15); color: var(--zen-danger); }
+}
+
+.btn-pay {
+  background: var(--zen-gold);
+  color: var(--zen-bg-primary);
+  border: none;
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  &:hover { background: var(--zen-gold-light); }
+}
+
 .btn-cancel {
   background: transparent;
   border: 1px solid var(--zen-danger);
@@ -129,6 +154,16 @@
     color: var(--zen-text-secondary);
     margin-bottom: 1rem;
   }
+}
+
+.payment-message {
+  padding: 0.8rem 1.2rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  &.success { background: rgba(16,185,129,.15); color: var(--zen-success); border: 1px solid rgba(16,185,129,.3); }
+  &.error { background: rgba(239,68,68,.15); color: var(--zen-danger); border: 1px solid rgba(239,68,68,.3); }
 }
 
 .btn-gold-outline {
