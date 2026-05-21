@@ -1,8 +1,9 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ElementRef, ViewChild, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AIService, ChatMessage, AIResponse, RateLimitStatus } from '../../core/services/ai';
 import { RouterModule } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-ai-chat',
@@ -11,8 +12,11 @@ import { RouterModule } from '@angular/router';
   templateUrl: './ai-chat.component.html',
   styleUrls: ['./ai-chat.component.scss'],
 })
-export class AiChatComponent {
+export class AiChatComponent implements OnDestroy {
   private aiService = inject(AIService);
+  private destroy$ = new Subject<void>();
+
+  @ViewChild('messageContainer') private messageContainer?: ElementRef<HTMLElement>;
 
   messages: ChatMessage[] = [
     {
@@ -23,14 +27,19 @@ export class AiChatComponent {
     },
   ];
 
-  userInput: string = '';
-  isLoading: boolean = false;
-  showChat: boolean = false;
+  userInput = '';
+  isLoading = false;
+  showChat = false;
   currentRecommendations: any[] = [];
   rateLimitStatus: RateLimitStatus | null = null;
-  usingAI: boolean = false;
-  isRateLimited: boolean = false;
-  rateLimitMessage: string = '';
+  usingAI = false;
+  isRateLimited = false;
+  rateLimitMessage = '';
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   toggleChat() {
     if (!this.showChat) {
@@ -42,7 +51,6 @@ export class AiChatComponent {
   sendMessage() {
     if (!this.userInput.trim() || this.isLoading) return;
 
-    // Add user message
     const userMessage: ChatMessage = {
       role: 'user',
       content: this.userInput,
@@ -54,49 +62,51 @@ export class AiChatComponent {
     this.userInput = '';
     this.isLoading = true;
 
-    // Get AI response
-    this.aiService.getRecommendations(messageToSend, this.messages).subscribe({
-      next: (response: AIResponse) => {
-        const assistantMessage: ChatMessage = {
-          role: 'assistant',
-          content: response.message,
-          timestamp: new Date(),
-        };
-        this.messages.push(assistantMessage);
-
-        if (response.recommendations) {
-          this.currentRecommendations = response.recommendations;
-        }
-
-        this.usingAI = response.usingAI ?? false;
-        this.isLoading = false;
-
-        // Refresh rate-limit counters after each successful call
-        this.loadRateLimitStatus();
-      },
-      error: (error) => {
-        console.error('AI Error:', error);
-        this.isLoading = false;
-
-        if (error.status === 429) {
-          const body = error.error ?? {};
-          const retryAfter: number = body.retryAfter ?? 60;
-          this.rateLimitMessage =
-            body.message ??
-            `You've reached the request limit. Please wait ${retryAfter} seconds before trying again.`;
-          this.isRateLimited = true;
-          // Refresh status so the bars reflect the current state
-          this.loadRateLimitStatus();
-        } else {
-          const errorMessage: ChatMessage = {
+    this.aiService.getRecommendations(messageToSend, this.messages)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: AIResponse) => {
+          const assistantMessage: ChatMessage = {
             role: 'assistant',
-            content: 'Sorry, I encountered an error. Please try again or contact support.',
+            content: response.message,
             timestamp: new Date(),
+            recommendations: response.recommendations,
           };
-          this.messages.push(errorMessage);
-        }
-      },
-    });
+          this.messages.push(assistantMessage);
+
+          if (response.recommendations) {
+            this.currentRecommendations = response.recommendations;
+          }
+
+          this.usingAI = response.usingAI ?? false;
+          this.isLoading = false;
+
+          this.loadRateLimitStatus();
+          this.scrollToBottom();
+        },
+        error: (error) => {
+          console.error('AI Error:', error);
+          this.isLoading = false;
+
+          if (error.status === 429) {
+            const body = error.error ?? {};
+            const retryAfter: number = body.retryAfter ?? 60;
+            this.rateLimitMessage =
+              body.message ??
+              `You've reached the request limit. Please wait ${retryAfter} seconds before trying again.`;
+            this.isRateLimited = true;
+            this.loadRateLimitStatus();
+          } else {
+            const errorMessage: ChatMessage = {
+              role: 'assistant',
+              content: 'Sorry, I encountered an error. Please try again or contact support.',
+              timestamp: new Date(),
+            };
+            this.messages.push(errorMessage);
+            this.scrollToBottom();
+          }
+        },
+      });
   }
 
   handleKeyPress(event: KeyboardEvent) {
@@ -118,14 +128,13 @@ export class AiChatComponent {
     this.currentRecommendations = [];
   }
 
-  viewHotelDetails(hotelId: string) {
-    // Navigate to hotel details page
-    // This will be handled by the router in the template
-  }
-
   formatMessage(content: string): string {
-    // Convert markdown-like syntax to HTML
-    return content
+    const escaped = content
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+    return escaped
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/\n/g, '<br>');
@@ -148,30 +157,28 @@ export class AiChatComponent {
   }
 
   loadRateLimitStatus() {
-    this.aiService.getRateLimitStatus().subscribe({
-      next: (status: RateLimitStatus) => {
-        this.rateLimitStatus = status;
-        // Show backoff banner if Gemini's circuit breaker is open
-        if (status.backingOff && status.backoffUntil) {
-          const until = new Date(status.backoffUntil);
-          const secsLeft = Math.ceil((until.getTime() - Date.now()) / 1000);
-          if (secsLeft > 0) {
-            const reason =
-              status.backoffReason === 'daily'
-                ? 'The daily AI quota has been reached. Responses will use the built-in engine until tomorrow.'
-                : `The AI service is cooling down. It will resume in ${secsLeft}s.`;
-            this.isRateLimited = true;
-            this.rateLimitMessage = reason;
-          } else {
-            this.isRateLimited = false;
+    this.aiService.getRateLimitStatus()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (status: RateLimitStatus) => {
+          this.rateLimitStatus = status;
+          if (status.backingOff && status.backoffUntil) {
+            const until = new Date(status.backoffUntil);
+            const secsLeft = Math.ceil((until.getTime() - Date.now()) / 1000);
+            if (secsLeft > 0) {
+              const reason =
+                status.backoffReason === 'daily'
+                  ? 'The daily AI quota has been reached. Responses will use the built-in engine until tomorrow.'
+                  : `The AI service is cooling down. It will resume in ${secsLeft}s.`;
+              this.isRateLimited = true;
+              this.rateLimitMessage = reason;
+            } else {
+              this.isRateLimited = false;
+            }
           }
-        }
-      },
-      error: (err) => {
-        // Non-critical — silently ignore if the endpoint is unavailable
-        console.warn('Could not load rate-limit status:', err);
-      },
-    });
+        },
+        error: () => {},
+      });
   }
 
   getRateLimitBarWidth(used: number, limit: number): string {
@@ -182,5 +189,12 @@ export class AiChatComponent {
 
   roundScore(score: number): number {
     return Math.round(score);
+  }
+
+  private scrollToBottom(): void {
+    setTimeout(() => {
+      const el = this.messageContainer?.nativeElement;
+      if (el) el.scrollTop = el.scrollHeight;
+    });
   }
 }

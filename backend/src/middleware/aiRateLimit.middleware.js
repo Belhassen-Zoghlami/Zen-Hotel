@@ -41,6 +41,23 @@ const MS_PER_MINUTE = 60 * 1000;
  * }
  */
 const ipStore = new Map();
+const STORE_CLEANUP_INTERVAL = 3600000; // 1 hour
+
+/**
+ * Removes IP records that haven't had activity today.
+ */
+function _cleanupStaleIpRecords() {
+  const today = _todayUTC();
+  for (const [ip, record] of ipStore) {
+    if (record.dailyDate !== today) {
+      ipStore.delete(ip);
+    }
+  }
+}
+
+// Run cleanup every hour
+setInterval(_cleanupStaleIpRecords, STORE_CLEANUP_INTERVAL);
+_cleanupStaleIpRecords(); // immediate cleanup on start
 
 /**
  * globalStore – counters shared across all IPs
@@ -154,6 +171,19 @@ function getRateLimitStatus(ip) {
  * Returns HTTP 429 + JSON when any limit is exceeded.
  * On pass-through, increments all counters and sets X-RateLimit-* headers.
  */
+function _setRateLimitHeaders(res, record) {
+  _pruneLog(globalStore.minuteLog);
+  _pruneLog(record.minuteLog);
+  res.set({
+    "X-RateLimit-IP-Daily-Limit": IP_DAILY_LIMIT,
+    "X-RateLimit-IP-Daily-Remaining": Math.max(0, IP_DAILY_LIMIT - record.dailyCount),
+    "X-RateLimit-IP-Minute-Limit": IP_MINUTE_LIMIT,
+    "X-RateLimit-IP-Minute-Remaining": Math.max(0, IP_MINUTE_LIMIT - record.minuteLog.length),
+    "X-RateLimit-Global-Daily-Remaining": Math.max(0, GLOBAL_DAILY_LIMIT - globalStore.dailyCount),
+    "X-RateLimit-Global-Minute-Remaining": Math.max(0, GLOBAL_MINUTE_LIMIT - globalStore.minuteLog.length),
+  });
+}
+
 function aiRateLimitMiddleware(req, res, next) {
   const ip =
     (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
@@ -178,6 +208,7 @@ function aiRateLimitMiddleware(req, res, next) {
       Math.ceil((oldest + MS_PER_MINUTE - now) / 1000),
       1,
     );
+    _setRateLimitHeaders(res, record);
     return res.status(429).json({
       success: false,
       message: `The AI service is currently busy. Please wait ${retryAfter} second(s) and try again.`,
@@ -193,6 +224,7 @@ function aiRateLimitMiddleware(req, res, next) {
       Math.ceil((oldest + MS_PER_MINUTE - now) / 1000),
       1,
     );
+    _setRateLimitHeaders(res, record);
     return res.status(429).json({
       success: false,
       message: `Too many requests. You can send at most ${IP_MINUTE_LIMIT} AI requests per minute. Please wait ${retryAfter} second(s).`,
@@ -204,6 +236,7 @@ function aiRateLimitMiddleware(req, res, next) {
   // 3. Global daily cap
   if (globalStore.dailyCount >= GLOBAL_DAILY_LIMIT) {
     const retryAfter = Math.ceil((_nextMidnightUTC() - now) / 1000);
+    _setRateLimitHeaders(res, record);
     return res.status(429).json({
       success: false,
       message:
@@ -216,6 +249,7 @@ function aiRateLimitMiddleware(req, res, next) {
   // 4. Per-IP daily cap
   if (record.dailyCount >= IP_DAILY_LIMIT) {
     const retryAfter = Math.ceil((_nextMidnightUTC() - now) / 1000);
+    _setRateLimitHeaders(res, record);
     return res.status(429).json({
       success: false,
       message: `You have reached your daily limit of ${IP_DAILY_LIMIT} AI requests. Your quota resets at midnight UTC.`,
@@ -230,17 +264,7 @@ function aiRateLimitMiddleware(req, res, next) {
   globalStore.dailyCount += 1;
   globalStore.minuteLog.push(now);
 
-  res.set({
-    "X-RateLimit-IP-Daily-Limit": IP_DAILY_LIMIT,
-    "X-RateLimit-IP-Daily-Remaining": IP_DAILY_LIMIT - record.dailyCount,
-    "X-RateLimit-IP-Minute-Limit": IP_MINUTE_LIMIT,
-    "X-RateLimit-IP-Minute-Remaining":
-      IP_MINUTE_LIMIT - record.minuteLog.length,
-    "X-RateLimit-Global-Daily-Remaining":
-      GLOBAL_DAILY_LIMIT - globalStore.dailyCount,
-    "X-RateLimit-Global-Minute-Remaining":
-      GLOBAL_MINUTE_LIMIT - globalStore.minuteLog.length,
-  });
+  _setRateLimitHeaders(res, record);
 
   next();
 }

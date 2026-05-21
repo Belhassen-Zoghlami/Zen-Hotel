@@ -17,6 +17,7 @@ class AIService {
     this.zenModel = null;
     this._backoffUntil = 0;
     this._backoffReason = null;
+    this._geocodeCache = new Map();
     this._initZen();
   }
 
@@ -37,28 +38,46 @@ class AIService {
     );
   }
 
-  get _zenEnabled() {
+  _isZenAvailable() {
     if (this.apiKey === null || this.zenModel === null) return false;
     if (Date.now() < this._backoffUntil) return false;
-    this._backoffUntil = 0;
-    this._backoffReason = null;
     return true;
   }
 
+  _clearBackoff() {
+    this._backoffUntil = 0;
+    this._backoffReason = null;
+    this._consecutiveRateLimits = 0;
+  }
+
+  async _fetchWithTimeout(url, options, timeoutMs = 10000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      return response;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async _callZen(messages) {
-    const response = await fetch(`${ZEN_BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.apiKey}`,
+    const response = await this._fetchWithTimeout(
+      `${ZEN_BASE_URL}/chat/completions`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: this.zenModel,
+          messages,
+          max_tokens: 2000,
+          temperature: 0.7,
+        }),
       },
-      body: JSON.stringify({
-        model: this.zenModel,
-        messages,
-        max_tokens: 2000,
-        temperature: 0.7,
-      }),
-    });
+    );
 
     if (!response.ok) {
       const body = await response.text();
@@ -80,9 +99,18 @@ class AIService {
     return data.choices?.[0]?.message?.content ?? "";
   }
 
+  _isRateLimitError(err) {
+    return (
+      err.status === 429 ||
+      err.message?.includes("429") ||
+      err.message?.includes("rate limit") ||
+      err.message?.includes("quota")
+    );
+  }
+
   _handleZenError(err) {
-    let retryAfterSec = 60;
-    let reason = "minute";
+    let retryAfterSec = 65;
+    this._consecutiveRateLimits = (this._consecutiveRateLimits || 0) + 1;
 
     if (err.status === 429) {
       if (err.body?.error?.details?.retryAfter) {
@@ -90,21 +118,23 @@ class AIService {
       }
       const msg = (err.body?.error?.message ?? "").toLowerCase();
       if (msg.includes("day") || msg.includes("daily")) {
-        reason = "daily";
-        const now = new Date();
-        const midnightUTC = new Date(
-          Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1),
-        );
-        retryAfterSec = Math.ceil((midnightUTC.getTime() - Date.now()) / 1000);
+        this._backoffUntil = 0;
+        this._backoffReason = null;
+        this._consecutiveRateLimits = 0;
+        return 0;
       }
     }
 
+    // Exponential backoff: double for each consecutive hit
+    const multiplier = Math.min(this._consecutiveRateLimits, 5);
+    retryAfterSec = retryAfterSec * Math.pow(2, multiplier - 1);
+
     this._backoffUntil = Date.now() + retryAfterSec * 1000;
-    this._backoffReason = reason;
+    this._backoffReason = "minute";
 
     console.warn(
-      `[AIService] Zen API rate-limited (${reason}). Circuit breaker open for ${retryAfterSec}s ` +
-        `(until ${new Date(this._backoffUntil).toISOString()}).`,
+      `[AIService] Zen API rate-limited (attempt ${this._consecutiveRateLimits}). ` +
+      `Circuit breaker open for ${retryAfterSec}s (until ${new Date(this._backoffUntil).toISOString()}).`,
     );
 
     return retryAfterSec;
@@ -115,7 +145,7 @@ class AIService {
   getStatus() {
     const backingOff = this.apiKey !== null && Date.now() < this._backoffUntil;
     return {
-      aiEnabled: this._zenEnabled,
+      aiEnabled: this._isZenAvailable(),
       model: this.zenModel ?? "rule-based-fallback",
       backingOff,
       backoffUntil: backingOff
@@ -147,22 +177,60 @@ class AIService {
    * Returns { lat, lng, displayName } or null.
    */
   async _geocodeLocation(locationName) {
-    const url =
-      `https://nominatim.openstreetmap.org/search?` +
-      `q=${encodeURIComponent(locationName)}&format=json&limit=1`;
-    try {
-      const res = await fetch(url, {
-        headers: { "User-Agent": "ZenHotels/1.0" },
-      });
+    const cacheKey = locationName.toLowerCase().trim();
+    const cached = this._geocodeCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < 86400000) return cached.result;
+    if (cached) this._geocodeCache.delete(cacheKey);
+
+    const headers = { "User-Agent": "ZenHotels/1.0" };
+    const parseResult = (data) =>
+      data?.[0]
+        ? {
+            lat: parseFloat(data[0].lat),
+            lng: parseFloat(data[0].lon),
+            displayName: data[0].display_name,
+          }
+        : null;
+
+    const tryFetch = async (params) => {
+      const res = await this._fetchWithTimeout(
+        `https://nominatim.openstreetmap.org/search?${params}`,
+        { headers },
+        5000,
+      );
       if (!res.ok) return null;
-      const data = await res.json();
-      if (!data || data.length === 0) return null;
-      return {
-        lat: parseFloat(data[0].lat),
-        lng: parseFloat(data[0].lon),
-        displayName: data[0].display_name,
-      };
-    } catch {
+      return parseResult(await res.json());
+    };
+
+    try {
+      let result =
+        (await tryFetch(
+          new URLSearchParams({
+            city: locationName,
+            country: "Tunisia",
+            format: "json",
+            limit: "1",
+          }),
+        )) ||
+        (await tryFetch(
+          new URLSearchParams({
+            q: `${locationName}, Tunisia`,
+            format: "json",
+            limit: "1",
+          }),
+        )) ||
+        (await tryFetch(
+          new URLSearchParams({ q: locationName, format: "json", limit: "1" }),
+        ));
+
+      if (result) {
+        this._geocodeCache.set(cacheKey, { result, timestamp: Date.now() });
+      } else {
+        console.warn(`[AIService] Geocoding failed for: "${locationName}"`);
+      }
+      return result;
+    } catch (err) {
+      console.error(`[AIService] Geocoding error for "${locationName}":`, err.message);
       return null;
     }
   }
@@ -185,7 +253,6 @@ class AIService {
       })
       .sort((a, b) => a.distanceKm - b.distanceKm);
 
-    // Assign matchScore inversely: closest hotel gets 100, then decreasing
     if (withDistance.length > 0) {
       const maxDist = withDistance[withDistance.length - 1].distanceKm;
       const minDist = withDistance[0].distanceKm;
@@ -713,7 +780,7 @@ class AIService {
       } else if (hotel.matchScore) {
         response += ` | Match: ${Math.round(hotel.matchScore)}%`;
       }
-      if (hotel.cheapestPrice > 0) {
+      if (hotel.cheapestPrice != null) {
         response += ` | From $${hotel.cheapestPrice}/night`;
       }
       if (hotel.availableRooms > 0) {
@@ -828,7 +895,7 @@ Please write a friendly, helpful recommendation response in 2-4 paragraphs:
 
       const hotels = await Hotel.find().select(
         "-owner -createdAt -updatedAt -__v",
-      );
+      ).limit(100);
 
       let topRecommendations = [];
       let geocoded = null;
@@ -865,15 +932,14 @@ Please write a friendly, helpful recommendation response in 2-4 paragraphs:
       }
 
       // Step 3: try Zen
-      if (this._zenEnabled) {
+      if (this._isZenAvailable()) {
         try {
           const messages = this._buildRecommendationMessages(
             userMessage,
             topRecommendations,
           );
           const text = await this._callZen(messages);
-          this._backoffUntil = 0;
-          this._backoffReason = null;
+          this._clearBackoff();
 
           return {
             success: true,
@@ -886,13 +952,7 @@ Please write a friendly, helpful recommendation response in 2-4 paragraphs:
               : null,
           };
         } catch (zenErr) {
-          const isQuotaError =
-            zenErr.status === 429 ||
-            zenErr.message?.includes("429") ||
-            zenErr.message?.includes("rate limit") ||
-            zenErr.message?.includes("quota");
-
-          if (isQuotaError) {
+          if (this._isRateLimitError(zenErr)) {
             this._handleZenError(zenErr);
           } else {
             console.error(
@@ -926,7 +986,7 @@ Please write a friendly, helpful recommendation response in 2-4 paragraphs:
 
   async handleFollowUp(userMessage, previousRecommendations) {
     if (
-      this._zenEnabled &&
+      this._isZenAvailable() &&
       previousRecommendations &&
       previousRecommendations.length > 0
     ) {
@@ -944,13 +1004,7 @@ Please write a friendly, helpful recommendation response in 2-4 paragraphs:
           usingAI: true,
         };
       } catch (zenErr) {
-        const isQuotaError =
-          zenErr.status === 429 ||
-          zenErr.message?.includes("429") ||
-          zenErr.message?.includes("rate limit") ||
-          zenErr.message?.includes("quota");
-
-        if (isQuotaError) {
+        if (this._isRateLimitError(zenErr)) {
           this._handleZenError(zenErr);
         } else {
           console.error(

@@ -6,6 +6,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  recommendations?: any[];
 }
 
 export interface AIResponse {

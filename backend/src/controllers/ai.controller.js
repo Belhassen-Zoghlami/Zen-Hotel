@@ -14,10 +14,16 @@ exports.getRecommendations = async (req, res) => {
   try {
     const { message, conversationHistory } = req.body;
 
-    if (!message) {
+    if (!message || typeof message !== "string") {
       return res.status(400).json({
         success: false,
-        message: "Message is required",
+        message: "Message is required and must be a string",
+      });
+    }
+    if (message.length > 2000) {
+      return res.status(400).json({
+        success: false,
+        message: "Message must be 2000 characters or fewer",
       });
     }
 
@@ -25,8 +31,8 @@ exports.getRecommendations = async (req, res) => {
 
     // Route to follow-up handler when conversation history is present
     if (conversationHistory && conversationHistory.length > 0) {
-      const lastRecommendations =
-        conversationHistory[conversationHistory.length - 1].recommendations;
+      const lastEntry = conversationHistory[conversationHistory.length - 1];
+      const lastRecommendations = lastEntry?.recommendations;
       result = await aiService.handleFollowUp(message, lastRecommendations);
     } else {
       result = await aiService.getRecommendations(message);
