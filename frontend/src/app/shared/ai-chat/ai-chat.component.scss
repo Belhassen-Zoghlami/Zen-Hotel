@@ -54,8 +54,8 @@
     position: absolute;
     bottom: 80px;
     right: 0;
-    width: 350px;
-    height: 500px;
+    width: 420px;
+    height: 550px;
     background: var(--zen-bg-card);
     border: 1px solid var(--zen-border);
     border-radius: 12px;
@@ -75,8 +75,8 @@
     }
 
     @media (min-width: 768px) {
-      width: 400px;
-      height: 600px;
+      width: 520px;
+      height: 650px;
     }
 
     .chat-header {
