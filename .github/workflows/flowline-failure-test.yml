@@ -1,0 +1,13 @@
+name: FlowLine failure test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fail:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Simulate failure
+        run: |
+          echo "FlowLine webhook test"
+          exit 1
