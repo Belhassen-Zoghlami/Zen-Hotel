@@ -8,10 +8,11 @@ export class RoomService {
   private http = inject(HttpClient);
   private apiUrl = 'http://localhost:3000/api/Room';
 
-  getRooms(hotelId: string) {
-    return this.http.get(`${this.apiUrl}/${hotelId}`, {
-      withCredentials: true,
-    });
+  getRooms(hotelId: string, params: any = {}) {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k,v]) => { if (v !== undefined && v !== null && v !== '') qs.set(k, String(v)); });
+    const q = qs.toString();
+    return this.http.get(`${this.apiUrl}/${hotelId}${q ? '?' + q : ''}`, { withCredentials: true });
   }
 
   getRoom(hotelId: string, roomId: string) {

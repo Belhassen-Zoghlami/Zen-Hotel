@@ -1,41 +1,15 @@
 <div class="dashboard-wrapper">
   <div class="container">
-
-    <!-- Header -->
     <div class="dashboard-header">
       <h2>Owner <span class="gold">Dashboard</span></h2>
       <p>Manage your hotels and bookings</p>
     </div>
 
-    <!-- Stats -->
     <div class="row g-3 mb-4">
-      <div class="col-md-4">
-        <div class="stat-card">
-          <i class="pi pi-building"></i>
-          <div>
-            <span class="stat-number">{{ hotels.length }}</span>
-            <span class="stat-label">My Hotels</span>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="stat-card">
-          <i class="pi pi-check-circle"></i>
-          <div>
-            <span class="stat-number">{{ confirmedCount }}</span>
-            <span class="stat-label">Confirmed</span>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="stat-card">
-          <i class="pi pi-clock"></i>
-          <div>
-            <span class="stat-number">{{ pendingCount }}</span>
-            <span class="stat-label">Pending</span>
-          </div>
-        </div>
-      </div>
+      <div class="col-md-3"><div class="stat-card"><i class="pi pi-building"></i><div><span class="stat-number">{{ hotels.length }}</span><span class="stat-label">My Hotels</span></div></div></div>
+      <div class="col-md-3"><div class="stat-card"><i class="pi pi-check-circle"></i><div><span class="stat-number">{{ confirmedCount }}</span><span class="stat-label">Confirmed</span></div></div></div>
+      <div class="col-md-3"><div class="stat-card"><i class="pi pi-clock"></i><div><span class="stat-number">{{ pendingCount }}</span><span class="stat-label">Pending</span></div></div></div>
+      <div class="col-md-3"><div class="stat-card"><i class="pi pi-verified"></i><div><span class="stat-number">{{ completedCount }}</span><span class="stat-label">Completed</span></div></div></div>
     </div>
 
     <div class="dashboard-add-row mb-4">
@@ -47,149 +21,61 @@
 
     @if (showAddHotelForm) {
       <div class="section-card mb-4 hotel-form-card">
-        <div class="section-header">
-          <h3>Create a New Hotel</h3>
-        </div>
-        <div class="hotel-form">
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label class="form-label">Hotel Name</label>
-              <input class="zen-input w-100" type="text" [(ngModel)]="newHotel.name" placeholder="Hotel name" />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">City / Location</label>
-              <input class="zen-input w-100" type="text" [(ngModel)]="newHotel.location" placeholder="City or neighborhood" />
-            </div>
-            <div class="col-12">
-              <label class="form-label">Select Location on Map</label>
-              <app-map-picker 
-                (locationSelected)="onNewHotelLocationSelected($event)"
-                [initialCoordinates]="newHotel.coordinates.latitude && newHotel.coordinates.longitude ? { latitude: newHotel.coordinates.latitude, longitude: newHotel.coordinates.longitude } : undefined"
-                [initialAddress]="newHotel.location">
-              </app-map-picker>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Rating</label>
-              <select class="zen-input w-100" [(ngModel)]="newHotel.rating">
-                <option value="">Select rating</option>
-                <option value="1 star">1 Star</option>
-                <option value="2 stars">2 Stars</option>
-                <option value="3 stars">3 Stars</option>
-                <option value="4 stars">4 Stars</option>
-                <option value="5 stars">5 Stars</option>
-              </select>
-            </div>
-            <div class="col-12">
-              <label class="form-label">Description</label>
-              <textarea class="zen-input w-100" rows="3" [(ngModel)]="newHotel.description" placeholder="Brief hotel description"></textarea>
-            </div>
-            <div class="col-12">
-              <label class="form-label">Hotel Images</label>
-              <input class="zen-input w-100" type="file" multiple (change)="onHotelImagesChange($event)" accept="image/*" />
-            </div>
-            <div class="col-12 hotel-form-actions">
-              <button class="btn-confirm" (click)="createHotel()" [disabled]="isCreatingHotel">
-                {{ isCreatingHotel ? 'Creating...' : 'Create Hotel' }}
-              </button>
-            </div>
-            @if (hotelCreateError) {
-              <div class="col-12">
-                <p class="form-error">{{ hotelCreateError }}</p>
-              </div>
-            }
+        <div class="section-header"><h3>Create a New Hotel</h3></div>
+        <div class="hotel-form"><div class="row g-3">
+          <div class="col-md-4"><label class="form-label">Hotel Name</label><input class="zen-input w-100" type="text" [(ngModel)]="newHotel.name" placeholder="Hotel name" /></div>
+          <div class="col-md-4"><label class="form-label">City / Location</label><input class="zen-input w-100" type="text" [(ngModel)]="newHotel.location" placeholder="City or neighborhood" /></div>
+          <div class="col-md-4"><label class="form-label">Rating (1-5)</label><select class="zen-input w-100" [(ngModel)]="newHotel.rating"><option value="">Select rating</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+          <div class="col-md-4"><label class="form-label">Status</label><select class="zen-input w-100" [(ngModel)]="newHotel.status"><option value="published">Published</option><option value="draft">Draft</option><option value="archived">Archived</option></select></div>
+          <div class="col-12"><label class="form-label">Select Location on Map</label>
+            <app-map-picker (locationSelected)="onNewHotelLocationSelected($event)" [initialCoordinates]="newHotel.coordinates.latitude && newHotel.coordinates.longitude ? { latitude: newHotel.coordinates.latitude, longitude: newHotel.coordinates.longitude } : undefined" [initialAddress]="newHotel.location"></app-map-picker>
           </div>
-        </div>
+          <div class="col-12"><label class="form-label">Description</label><textarea class="zen-input w-100" rows="3" [(ngModel)]="newHotel.description" placeholder="Brief hotel description"></textarea></div>
+          <div class="col-12"><label class="form-label">Tags</label><div style="display:flex;flex-wrap:wrap;gap:.5rem;">@for (tag of tags; track tag._id) { <label class="summary-tag" style="cursor:pointer"><input type="checkbox" [checked]="newHotel.tags.includes(tag._id)" (change)="toggleNewTag(tag._id)" /> {{ tag.name }}</label> }</div>@if (!tags.length) { <small class="text-muted">No tags available (admin/owner can create tags).</small> }</div>
+          <div class="col-12"><label class="form-label">Hotel Images</label><input class="zen-input w-100" type="file" multiple (change)="onHotelImagesChange($event)" accept="image/*" /></div>
+          <div class="col-12 hotel-form-actions"><button class="btn-confirm" (click)="createHotel()" [disabled]="isCreatingHotel">{{ isCreatingHotel ? 'Creating...' : 'Create Hotel' }}</button></div>
+          @if (hotelCreateError) { <div class="col-12"><p class="form-error">{{ hotelCreateError }}</p></div> }
+        </div></div>
       </div>
     }
 
-    <!-- Edit Hotel Modal -->
     @if (editingHotelId) {
       <div class="section-card mb-4 hotel-form-card">
-        <div class="section-header">
-          <h3>Edit Hotel</h3>
-        </div>
-        <div class="hotel-form">
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label class="form-label">Hotel Name</label>
-              <input class="zen-input w-100" type="text" [(ngModel)]="editHotel.name" />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">City / Location</label>
-              <input class="zen-input w-100" type="text" [(ngModel)]="editHotel.location" />
-            </div>
-            <div class="col-12">
-              <label class="form-label">Update Location on Map</label>
-              <app-map-picker 
-                (locationSelected)="onEditHotelLocationSelected($event)"
-                [initialCoordinates]="editHotel.coordinates.latitude && editHotel.coordinates.longitude ? { latitude: editHotel.coordinates.latitude, longitude: editHotel.coordinates.longitude } : undefined"
-                [initialAddress]="editHotel.location">
-              </app-map-picker>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Rating</label>
-              <select class="zen-input w-100" [(ngModel)]="editHotel.rating">
-                <option value="">Select rating</option>
-                <option value="1 star">1 Star</option>
-                <option value="2 stars">2 Stars</option>
-                <option value="3 stars">3 Stars</option>
-                <option value="4 stars">4 Stars</option>
-                <option value="5 stars">5 Stars</option>
-              </select>
-            </div>
-            <div class="col-12">
-              <label class="form-label">Description</label>
-              <textarea class="zen-input w-100" rows="3" [(ngModel)]="editHotel.description"></textarea>
-            </div>
-            <div class="col-12">
-              <label class="form-label">Add More Images</label>
-              <input class="zen-input w-100" type="file" multiple (change)="onEditHotelImagesChange($event)" accept="image/*" />
-            </div>
-            <div class="col-12 hotel-form-actions">
-              <button class="btn-confirm" (click)="updateHotel()">
-                Save Changes
-              </button>
-              <button class="btn-cancel" (click)="cancelEditHotel()">
-                Cancel
-              </button>
-            </div>
+        <div class="section-header"><h3>Edit Hotel</h3></div>
+        <div class="hotel-form"><div class="row g-3">
+          <div class="col-md-4"><label class="form-label">Hotel Name</label><input class="zen-input w-100" type="text" [(ngModel)]="editHotel.name" /></div>
+          <div class="col-md-4"><label class="form-label">City / Location</label><input class="zen-input w-100" type="text" [(ngModel)]="editHotel.location" /></div>
+          <div class="col-md-4"><label class="form-label">Rating (1-5)</label><select class="zen-input w-100" [(ngModel)]="editHotel.rating"><option value="">Select rating</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+          <div class="col-md-4"><label class="form-label">Status</label><select class="zen-input w-100" [(ngModel)]="editHotel.status"><option value="published">Published</option><option value="draft">Draft</option><option value="archived">Archived</option></select></div>
+          <div class="col-12"><label class="form-label">Update Location on Map</label>
+            <app-map-picker (locationSelected)="onEditHotelLocationSelected($event)" [initialCoordinates]="editHotel.coordinates.latitude && editHotel.coordinates.longitude ? { latitude: editHotel.coordinates.latitude, longitude: editHotel.coordinates.longitude } : undefined" [initialAddress]="editHotel.location"></app-map-picker>
           </div>
-        </div>
+          <div class="col-12"><label class="form-label">Description</label><textarea class="zen-input w-100" rows="3" [(ngModel)]="editHotel.description"></textarea></div>
+          <div class="col-12"><label class="form-label">Tags</label><div style="display:flex;flex-wrap:wrap;gap:.5rem;">@for (tag of tags; track tag._id) { <label class="summary-tag" style="cursor:pointer"><input type="checkbox" [checked]="editHotel.tags.includes(tag._id)" (change)="toggleEditTag(tag._id)" /> {{ tag.name }}</label> }</div>@if (!tags.length) { <small class="text-muted">No tags available.</small> }</div>
+          <div class="col-12"><label class="form-label">Add More Images</label><input class="zen-input w-100" type="file" multiple (change)="onEditHotelImagesChange($event)" accept="image/*" /></div>
+          <div class="col-12 hotel-form-actions"><button class="btn-confirm" (click)="updateHotel()">Save Changes</button><button class="btn-cancel" (click)="cancelEditHotel()">Cancel</button></div>
+        </div></div>
       </div>
     }
 
-    <!-- My Hotels -->
     <div class="section-card mb-4">
       <h3>My Hotels</h3>
-
       @if (hotels.length === 0) {
-        <div class="empty-state">
-          <i class="pi pi-building"></i>
-          <p>No hotels yet</p>
-        </div>
+        <div class="empty-state"><i class="pi pi-building"></i><p>No hotels yet</p></div>
       } @else {
         <div class="hotels-list">
           @for (hotel of hotels; track hotel._id) {
-            <div class="hotel-item"
-              [class.active]="hotel._id === selectedHotelId">
+            <div class="hotel-item" [class.active]="hotel._id === selectedHotelId">
               <div (click)="loadBookings(hotel._id)">
                 <span class="hotel-name">{{ hotel.name }}</span>
-                <span class="hotel-location">
-                  <i class="pi pi-map-marker"></i>
-                  {{ hotel.location }}
-                </span>
+                <span class="hotel-location"><i class="pi pi-map-marker"></i> {{ hotel.location }}</span>
+                <span class="badge-status {{ hotel.status === 'published' ? 'confirmed' : hotel.status === 'draft' ? 'pending' : 'cancelled' }}">{{ hotel.status || 'published' }}</span>
               </div>
               <div class="hotel-actions">
                 <span class="rating-badge">{{ hotel.rating }} ★</span>
-                <button class="btn-secondary" (click)="startEditHotel(hotel)" title="Edit Hotel">
-                  <i class="pi pi-fw pi-pencil"></i>
-                </button>
-                <button class="btn-rooms" (click)="manageRooms(hotel._id)" title="Manage Rooms">
-                  <i class="pi pi-fw pi-list"></i>
-                </button>
-                <button class="btn-delete" (click)="deleteHotel(hotel._id)" title="Delete Hotel">
-                  <i class="pi pi-trash"></i>
-                </button>
+                <button class="btn-secondary" (click)="startEditHotel(hotel)" title="Edit Hotel"><i class="pi pi-fw pi-pencil"></i></button>
+                <button class="btn-rooms" (click)="manageRooms(hotel._id)" title="Manage Rooms"><i class="pi pi-fw pi-list"></i></button>
+                <button class="btn-delete" (click)="deleteHotel(hotel._id)" title="Delete Hotel"><i class="pi pi-trash"></i></button>
               </div>
             </div>
           }
@@ -197,29 +83,25 @@
       }
     </div>
 
-    <!-- Bookings -->
     <div class="section-card">
-      <h3>Bookings</h3>
-
-      @if (bookings.length === 0) {
-        <div class="empty-state">
-          <i class="pi pi-calendar-times"></i>
-          <p>No bookings for this hotel</p>
-        </div>
+      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <h3>Bookings</h3>
+        <select class="zen-input" style="max-width:220px" [(ngModel)]="bookingFilterStatus" (change)="selectedHotelId && loadBookings(selectedHotelId)">
+          <option value="">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      @if (!selectedHotelId) {
+        <div class="empty-state"><p>Select a hotel to view bookings</p></div>
+      } @else if (bookings.length === 0) {
+        <div class="empty-state"><i class="pi pi-calendar-times"></i><p>No bookings for this hotel</p></div>
       } @else {
         <div class="table-responsive">
           <table class="table zen-table">
-            <thead>
-              <tr>
-                <th>Client</th>
-                <th>Room</th>
-                <th>Check In</th>
-                <th>Check Out</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Client</th><th>Room</th><th>Check In</th><th>Check Out</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
               @for (booking of bookings; track booking._id) {
                 <tr>
@@ -228,27 +110,12 @@
                   <td>{{ booking.checkIn | date:'mediumDate' }}</td>
                   <td>{{ booking.checkOut | date:'mediumDate' }}</td>
                   <td class="gold">${{ booking.totalPrice }}</td>
-                  <td>
-                    <span class="badge-status {{ booking.status }}">
-                      {{ booking.status }}
-                    </span>
-                  </td>
-                  <td>
-                    <div class="action-btns">
-                      @if (booking.status === 'pending') {
-                        <button class="btn-confirm"
-                          (click)="confirmBooking(booking._id)">
-                          Confirm
-                        </button>
-                      }
-                      @if (booking.status !== 'cancelled') {
-                        <button class="btn-cancel"
-                          (click)="cancelBooking(booking._id)">
-                          Cancel
-                        </button>
-                      }
-                    </div>
-                  </td>
+                  <td><span class="badge-status {{ booking.status }}">{{ booking.status }}</span></td>
+                  <td><div class="action-btns">
+                    @if (booking.status === 'pending') { <button class="btn-confirm" (click)="confirmBooking(booking._id)">Confirm</button> }
+                    @if (booking.status === 'confirmed') { <button class="btn-confirm" (click)="completeBooking(booking._id)">Complete</button> }
+                    @if (booking.status !== 'cancelled' && booking.status !== 'completed') { <button class="btn-cancel" (click)="cancelBooking(booking._id)">Cancel</button> }
+                  </div></td>
                 </tr>
               }
             </tbody>
@@ -256,6 +123,5 @@
         </div>
       }
     </div>
-
   </div>
 </div>

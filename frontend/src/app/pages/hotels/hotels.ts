@@ -11,7 +11,6 @@ import { DatePipe } from '@angular/common';
   styleUrl: './hotels.scss',
 })
 export class Hotels implements OnInit {
-
   private hotelService = inject(HotelService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -20,63 +19,53 @@ export class Hotels implements OnInit {
   hotels: any[] = [];
   cityFilter = '';
   ratingFilter = '';
+  q = '';
   searchCheckIn = '';
   searchCheckOut = '';
+  page = 1;
+  limit = 9;
+  total = 0;
+  pages = 1;
 
   ngOnInit(): void {
     this.route.queryParams.subscribe((params) => {
-      if (params['city']) {
-        this.cityFilter = params['city'];
-      }
-      if (params['checkIn']) {
-        this.searchCheckIn = params['checkIn'];
-      }
-      if (params['checkOut']) {
-        this.searchCheckOut = params['checkOut'];
-      }
+      this.cityFilter = params['city'] || '';
+      this.searchCheckIn = params['checkIn'] || '';
+      this.searchCheckOut = params['checkOut'] || '';
+      this.page = 1;
       this.loadHotels();
     });
   }
 
   loadHotels(): void {
-    const filters: any = {};
+    const filters: any = { page: this.page, limit: this.limit };
     if (this.cityFilter.trim()) filters.city = this.cityFilter.trim();
     if (this.ratingFilter) filters.rating = this.ratingFilter;
-
+    if (this.q.trim()) filters.q = this.q.trim();
     this.hotelService.getHotels(filters).subscribe({
       next: (res: any) => {
-        this.hotels = res;
+        this.hotels = Array.isArray(res) ? res : (res.items || []);
+        this.total = res.total ?? this.hotels.length;
+        this.pages = res.pages ?? 1;
+        this.page = res.page ?? this.page;
         this.cdr.detectChanges();
       },
       error: (err) => console.log(err)
     });
   }
 
-  onFilter(): void {
-    this.loadHotels();
-  }
+  onFilter(): void { this.page = 1; this.loadHotels(); }
+  goToHotel(id: string): void { this.router.navigate(['/hotels', id]); }
+  nextPage(): void { if (this.page < this.pages) { this.page++; this.loadHotels(); } }
+  prevPage(): void { if (this.page > 1) { this.page--; this.loadHotels(); } }
 
-  goToHotel(id: string): void {
-    this.router.navigate(['/hotels', id]);
-  }
   getImageUrl(storedPath?: string | { path?: string; url?: string }): string {
-    if (!storedPath) {
-      return '';
-    }
-
-    const pathValue = typeof storedPath === 'string'
-      ? storedPath
-      : storedPath.url || storedPath.path || '';
-
-    if (!pathValue) {
-      return '';
-    }
-
+    if (!storedPath) return '';
+    const pathValue = typeof storedPath === 'string' ? storedPath : storedPath.url || storedPath.path || '';
+    if (!pathValue) return '';
     const normalized = pathValue.replace(/\\/g, '/').trim();
-    if (/^https?:\/\//i.test(normalized)) {
-      return normalized;
-    }
-
+    if (/^https?:\/\//i.test(normalized)) return normalized;
     const trimmed = normalized.replace(/^\/+/, '').replace(/^images\//i, '');
     return `http://localhost:3000/images/${trimmed}`;
-  }}
+  }
+}

@@ -1,124 +1,56 @@
-<div class="dashboard-wrapper">
+﻿<div class="dashboard-wrapper">
   <div class="container">
-
-    <!-- Header -->
     <div class="dashboard-header">
       <h2>Admin <span class="gold">Dashboard</span></h2>
-      <p>Manage users, hotels and bookings</p>
+      <p>Manage users, bookings and audit trail</p>
     </div>
 
-    <!-- Stats -->
     <div class="row g-3 mb-4">
-      <div class="col-md-3">
-        <div class="stat-card">
-          <i class="pi pi-users"></i>
-          <div>
-            <span class="stat-number">{{ users.length }}</span>
-            <span class="stat-label">Total Users</span>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="stat-card">
-          <i class="pi pi-home"></i>
-          <div>
-            <span class="stat-number">{{ ownersCount }}</span>
-            <span class="stat-label">Owners</span>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="stat-card">
-          <i class="pi pi-calendar"></i>
-          <div>
-            <span class="stat-number">{{ bookings.length }}</span>
-            <span class="stat-label">Bookings</span>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="stat-card">
-          <i class="pi pi-dollar"></i>
-          <div>
-            <span class="stat-number">${{ totalRevenue }}</span>
-            <span class="stat-label">Revenue</span>
-          </div>
-        </div>
-      </div>
+      <div class="col-md-3"><div class="stat-card"><i class="pi pi-users"></i><div><span class="stat-number">{{ metrics?.totals?.users ?? users.length }}</span><span class="stat-label">Users</span></div></div></div>
+      <div class="col-md-3"><div class="stat-card"><i class="pi pi-home"></i><div><span class="stat-number">{{ ownersCount }}</span><span class="stat-label">Owners</span></div></div></div>
+      <div class="col-md-3"><div class="stat-card"><i class="pi pi-calendar"></i><div><span class="stat-number">{{ metrics?.totals?.bookings ?? bookings.length }}</span><span class="stat-label">Bookings</span></div></div></div>
+      <div class="col-md-3"><div class="stat-card"><i class="pi pi-dollar"></i><div><span class="stat-number">${{ totalRevenue }}</span><span class="stat-label">Revenue</span></div></div></div>
     </div>
+    @if (metrics) {
+      <div class="row g-3 mb-4">
+        <div class="col-md-4"><div class="stat-card"><i class="pi pi-building"></i><div><span class="stat-number">{{ metrics.totals.hotels }}</span><span class="stat-label">Hotels</span></div></div></div>
+        <div class="col-md-4"><div class="stat-card"><i class="pi pi-th-large"></i><div><span class="stat-number">{{ metrics.totals.rooms }}</span><span class="stat-label">Rooms</span></div></div></div>
+        <div class="col-md-4"><div class="stat-card"><i class="pi pi-check"></i><div><span class="stat-number">{{ metrics.bookingsByStatus.confirmed || 0 }} / {{ metrics.bookingsByStatus.completed || 0 }}</span><span class="stat-label">Confirmed / Completed</span></div></div></div>
+      </div>
+    }
 
-    <!-- Tabs -->
     <div class="tabs mb-4">
-      <button class="tab-btn" 
-        [class.active]="activeTab === 'users'"
-        (click)="activeTab = 'users'">
-        Users
-      </button>
-      <button class="tab-btn"
-        [class.active]="activeTab === 'bookings'"
-        (click)="activeTab = 'bookings'">
-        Bookings
-      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'users'" (click)="activeTab = 'users'">Users</button>
+      <button class="tab-btn" [class.active]="activeTab === 'bookings'" (click)="activeTab = 'bookings'">Bookings</button>
+      <button class="tab-btn" [class.active]="activeTab === 'audit'" (click)="activeTab = 'audit'">Audit Logs</button>
+      <button class="tab-btn" [class.active]="activeTab === 'tags'" (click)="activeTab = 'tags'">Tags</button>
     </div>
 
-    <!-- Users Tab -->
     @if (activeTab === 'users') {
       <div class="section-card">
         <h3>All Users</h3>
+        <div class="filters-bar" style="margin-bottom:1rem; display:flex; gap:.5rem; flex-wrap:wrap;">
+          <input class="zen-input" placeholder="Search name/email" [(ngModel)]="userFilters.q" />
+          <select class="zen-input" [(ngModel)]="userFilters.role"><option value="">All roles</option><option value="client">Client</option><option value="owner">Owner</option><option value="admin">Admin</option></select>
+          <select class="zen-input" [(ngModel)]="userFilters.isActive"><option value="">Any status</option><option value="true">Active</option><option value="false">Inactive</option></select>
+          <select class="zen-input" [(ngModel)]="userFilters.isValidated"><option value="">Any validation</option><option value="true">Validated</option><option value="false">Pending</option></select>
+          <button class="btn-confirm" (click)="loadUsers()">Filter</button>
+        </div>
         <div class="table-responsive">
           <table class="table zen-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Validated</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Validated</th><th>Actions</th></tr></thead>
             <tbody>
               @for (user of users; track user._id) {
                 <tr>
-                  <td>{{ user.name }}</td>
-                  <td>{{ user.email }}</td>
-                  <td>
-                    <span class="role-badge {{ user.role }}">{{ user.role }}</span>
-                  </td>
-                  <td>
-                    <span class="badge-status {{ user.isActive ? 'confirmed' : 'cancelled' }}">
-                      {{ user.isActive ? 'Active' : 'Inactive' }}
-                    </span>
-                  </td>
-                  <td>
-                    @if (user.role === 'owner') {
-                      <span class="badge-status {{ user.isValidated ? 'confirmed' : 'pending' }}">
-                        {{ user.isValidated ? 'Validated' : 'Pending' }}
-                      </span>
-                    } @else {
-                      <span class="text-muted">—</span>
-                    }
-                  </td>
-                  <td>
-                    <div class="action-btns">
-                      @if (user.role === 'owner' && !user.isValidated) {
-                        <button class="btn-confirm"
-                          (click)="validateOwner(user._id)">
-                          Validate
-                        </button>
-                      }
-                      <button class="btn-toggle"
-                        (click)="toggleStatus(user._id)">
-                        {{ user.isActive ? 'Disable' : 'Enable' }}
-                      </button>
-                      @if (user.role !== 'admin') {
-                        <button class="btn-cancel"
-                          (click)="deleteUser(user._id)">
-                          Delete
-                        </button>
-                      }
-                    </div>
-                  </td>
+                  <td>{{ user.name }}</td><td>{{ user.email }}</td>
+                  <td><span class="role-badge {{ user.role }}">{{ user.role }}</span></td>
+                  <td><span class="badge-status {{ user.isActive ? 'confirmed' : 'cancelled' }}">{{ user.isActive ? 'Active' : 'Inactive' }}</span></td>
+                  <td>@if (user.role === 'owner') { <span class="badge-status {{ user.isValidated ? 'confirmed' : 'pending' }}">{{ user.isValidated ? 'Validated' : 'Pending' }}</span> } @else { <span class="text-muted">—</span> }</td>
+                  <td><div class="action-btns">
+                    @if (user.role === 'owner' && !user.isValidated) { <button class="btn-confirm" (click)="validateOwner(user._id)">Validate</button> }
+                    @if (user.role !== 'admin') { <button class="btn-toggle" (click)="toggleStatus(user._id)">{{ user.isActive ? 'Disable' : 'Enable' }}</button> }
+                    @if (user.role !== 'admin') { <button class="btn-cancel" (click)="deleteUser(user._id)">Delete</button> }
+                  </div></td>
                 </tr>
               }
             </tbody>
@@ -127,37 +59,24 @@
       </div>
     }
 
-    <!-- Bookings Tab -->
     @if (activeTab === 'bookings') {
       <div class="section-card">
         <h3>All Bookings</h3>
+        <div class="filters-bar" style="margin-bottom:1rem; display:flex; gap:.5rem; flex-wrap:wrap;">
+          <select class="zen-input" [(ngModel)]="bookingFilters.status"><option value="">All statuses</option><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select>
+          <input class="zen-input" type="date" [(ngModel)]="bookingFilters.from" />
+          <input class="zen-input" type="date" [(ngModel)]="bookingFilters.to" />
+          <button class="btn-confirm" (click)="loadBookings()">Filter</button>
+        </div>
         <div class="table-responsive">
           <table class="table zen-table">
-            <thead>
-              <tr>
-                <th>Client</th>
-                <th>Hotel</th>
-                <th>Room</th>
-                <th>Check In</th>
-                <th>Check Out</th>
-                <th>Total</th>
-                <th>Status</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Client</th><th>Hotel</th><th>Room</th><th>Check In</th><th>Check Out</th><th>Total</th><th>Status</th></tr></thead>
             <tbody>
               @for (booking of bookings; track booking._id) {
                 <tr>
-                  <td>{{ booking.client?.name }}</td>
-                  <td>{{ booking.hotel?.name }}</td>
-                  <td>{{ booking.room?.roomNumber }}</td>
-                  <td>{{ booking.checkIn | date:'mediumDate' }}</td>
-                  <td>{{ booking.checkOut | date:'mediumDate' }}</td>
-                  <td class="gold">${{ booking.totalPrice }}</td>
-                  <td>
-                    <span class="badge-status {{ booking.status }}">
-                      {{ booking.status }}
-                    </span>
-                  </td>
+                  <td>{{ booking.client?.name }}</td><td>{{ booking.hotel?.name }}</td><td>{{ booking.room?.roomNumber }}</td>
+                  <td>{{ booking.checkIn | date:'mediumDate' }}</td><td>{{ booking.checkOut | date:'mediumDate' }}</td>
+                  <td class="gold">${{ booking.totalPrice }}</td><td><span class="badge-status {{ booking.status }}">{{ booking.status }}</span></td>
                 </tr>
               }
             </tbody>
@@ -166,5 +85,64 @@
       </div>
     }
 
+    @if (activeTab === 'audit') {
+      <div class="section-card">
+        <h3>Audit Logs</h3>
+        <div class="filters-bar" style="margin-bottom:1rem; display:flex; gap:.5rem; flex-wrap:wrap;">
+          <input class="zen-input" placeholder="Entity (user/booking/...)" [(ngModel)]="auditFilters.entity" />
+          <input class="zen-input" placeholder="Action (booking.confirmed)" [(ngModel)]="auditFilters.action" />
+          <button class="btn-confirm" (click)="loadAuditLogs()">Filter</button>
+        </div>
+        @if (auditLogs.length === 0) {
+          <div class="empty-state"><p>No audit logs</p></div>
+        } @else {
+          <div class="table-responsive">
+            <table class="table zen-table">
+              <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead>
+              <tbody>
+                @for (log of auditLogs; track log._id) {
+                  <tr>
+                    <td>{{ log.createdAt | date:'medium' }}</td>
+                    <td>{{ log.user?.name || log.user?.email || 'System' }}</td>
+                    <td>{{ log.action }}</td>
+                    <td>{{ log.entity }} {{ log.entityId || '' }}</td>
+                    <td><code style="font-size:11px">{{ log.details | json }}</code></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
+
+    @if (activeTab === 'tags') {
+      <div class="section-card">
+        <h3>Tags (Hotel Categories)</h3>
+        <div class="filters-bar" style="margin-bottom:1rem; display:flex; gap:.5rem; flex-wrap:wrap;">
+          <input class="zen-input" placeholder="Tag name" [(ngModel)]="newTag.name" />
+          <input class="zen-input" placeholder="Description (optional)" [(ngModel)]="newTag.description" />
+          <button class="btn-confirm" (click)="createTag()">Create Tag</button>
+        </div>
+        @if (tags.length === 0) {
+          <div class="empty-state"><p>No tags yet</p></div>
+        } @else {
+          <div class="table-responsive">
+            <table class="table zen-table">
+              <thead><tr><th>Name</th><th>Description</th><th>Created</th></tr></thead>
+              <tbody>
+                @for (tag of tags; track tag._id) {
+                  <tr>
+                    <td>{{ tag.name }}</td>
+                    <td>{{ tag.description || '-' }}</td>
+                    <td>{{ tag.createdAt | date:'mediumDate' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
   </div>
 </div>

@@ -70,9 +70,9 @@ export class HotelDetail implements OnInit {
 
       this.hotelService.getRooms(id).subscribe({
         next: (res: any) => {
-          this.rooms = res;
+          this.rooms = Array.isArray(res) ? res : (res.items || []);
           this.roomImageIndexes = {};
-          this.rooms.forEach(room => {
+          this.rooms.forEach((room: any) => {
             if (room.images?.length) {
               this.roomImageIndexes[room._id] = 0;
             }

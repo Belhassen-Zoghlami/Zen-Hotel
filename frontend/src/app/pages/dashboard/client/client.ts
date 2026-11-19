@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, inject, OnInit, NgZone} from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit, NgZone } from '@angular/core';
 import { BookingService } from '../../../core/services/booking';
 import { DatePipe } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
@@ -20,35 +20,28 @@ export class Client implements OnInit {
   paying = false;
   paymentMessage = '';
 
-ngOnInit(): void {
-  this.route.queryParams.subscribe((params) => {
-    if (params['payment'] === 'success' && params['session_id']) {
-      this.paymentMessage = 'Verifying payment...';
-      this.bookingService.verifyStripeSession(params['session_id']).subscribe({
-        next: () => {
-          this.paymentMessage = 'Payment successful! Your booking is confirmed.';
-          this.loadBookings();
-        },
-        error: () => {
-          this.paymentMessage = 'Payment verification failed. Please contact support.';
-        },
-      });
-    } else if (params['payment'] === 'cancelled') {
-      this.paymentMessage = 'Payment was cancelled. You can try again.';
-    }
-  });
-  this.loadBookings();
-}
+  ngOnInit(): void {
+    this.route.queryParams.subscribe((params) => {
+      if (params['payment'] === 'success' && params['session_id']) {
+        this.paymentMessage = 'Verifying payment...';
+        this.bookingService.verifyStripeSession(params['session_id']).subscribe({
+          next: () => { this.paymentMessage = 'Payment successful! Your booking is confirmed.'; this.loadBookings(); },
+          error: () => { this.paymentMessage = 'Payment verification failed. Please contact support.'; },
+        });
+      } else if (params['payment'] === 'cancelled') {
+        this.paymentMessage = 'Payment was cancelled. You can try again.';
+      }
+    });
+    this.loadBookings();
+  }
 
-loadBookings(): void {
-  this.bookingService.getMyBookings().subscribe({
-    next: (res: any) => {
-      this.bookings = res;
-      this.cdr.detectChanges();
-    },
-    error: (err) => console.log(err)
-  });
-}
+  loadBookings(): void {
+    this.bookingService.getMyBookings().subscribe({
+      next: (res: any) => { this.bookings = Array.isArray(res) ? res : (res.items || []); this.cdr.detectChanges(); },
+      error: (err) => console.log(err)
+    });
+  }
+
   cancelBooking(bookingId: string): void {
     this.bookingService.cancelBooking(bookingId).subscribe({
       next: () => {
@@ -57,6 +50,7 @@ loadBookings(): void {
           booking.status = 'cancelled';
           if (booking.paymentStatus === 'paid') booking.paymentStatus = 'refunded';
         }
+        this.cdr.detectChanges();
       },
       error: (err) => console.log(err),
     });
@@ -67,35 +61,15 @@ loadBookings(): void {
     this.paying = true;
     this.paymentMessage = '';
     this.cdr.detectChanges();
-
     this.bookingService.createStripeCheckout(bookingId).pipe(
-      finalize(() => {
-        this.ngZone.run(() => {
-          this.paying = false;
-          this.cdr.detectChanges();
-        });
-      })
+      finalize(() => { this.ngZone.run(() => { this.paying = false; this.cdr.detectChanges(); }); })
     ).subscribe({
-      next: (res) => {
-        this.ngZone.run(() => {
-          window.location.href = res.url;
-        });
-      },
-      error: (err) => {
-        console.error('Stripe checkout error:', err);
-        this.ngZone.run(() => {
-          this.paymentMessage = 'Failed to create payment session. Please try again.';
-          this.cdr.detectChanges();
-        });
-      },
+      next: (res) => { this.ngZone.run(() => { window.location.href = res.url; }); },
+      error: (err) => { console.error('Stripe checkout error:', err); this.ngZone.run(() => { this.paymentMessage = 'Failed to create payment session. Please try again.'; this.cdr.detectChanges(); }); },
     });
   }
 
-get confirmedCount(): number {
-  return this.bookings.filter(b => b.status === 'confirmed').length;
-}
-
-get pendingCount(): number {
-  return this.bookings.filter(b => b.status === 'pending').length;
-}
+  get confirmedCount(): number { return this.bookings.filter(b => b.status === 'confirmed').length; }
+  get pendingCount(): number { return this.bookings.filter(b => b.status === 'pending').length; }
+  get completedCount(): number { return this.bookings.filter(b => b.status === 'completed').length; }
 }

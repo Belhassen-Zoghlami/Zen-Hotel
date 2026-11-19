@@ -1,17 +1,15 @@
 <div class="hotels-wrapper">
   <div class="container">
-
-    <!-- Header -->
     <div class="hotels-header">
       <h2>Explore <span class="gold">Hotels</span></h2>
       <p>Find your perfect stay</p>
     </div>
 
-    <!-- Active search summary -->
-    @if (cityFilter || searchCheckIn || searchCheckOut) {
+    @if (cityFilter || searchCheckIn || searchCheckOut || q) {
       <div class="search-summary">
         <i class="pi pi-search"></i>
         Searching:
+        @if (q) { <span class="summary-tag">{{ q }}</span> }
         @if (cityFilter) { <span class="summary-tag">{{ cityFilter }}</span> }
         @if (searchCheckIn) { <span class="summary-tag">{{ searchCheckIn | date:'mediumDate' }}</span> }
         @if (searchCheckOut) { <span class="summary-tag">{{ searchCheckOut | date:'mediumDate' }}</span> }
@@ -19,30 +17,22 @@
       </div>
     }
 
-    <!-- Filters -->
     <div class="filters-bar">
-      <input
-        type="text"
-        class="zen-input"
-        placeholder="Search by city..."
-        [(ngModel)]="cityFilter"
-        (ngModelChange)="onFilter()"/>
+      <input type="text" class="zen-input" placeholder="Search name, location, description..." [(ngModel)]="q" (keyup.enter)="onFilter()"/>
+      <input type="text" class="zen-input" placeholder="City..." [(ngModel)]="cityFilter" (keyup.enter)="onFilter()"/>
       <select class="zen-input" [(ngModel)]="ratingFilter" (change)="onFilter()">
         <option value="">All ratings</option>
-        <option value="1">1 Star</option>
-        <option value="2">2 Stars</option>
-        <option value="3">3 Stars</option>
-        <option value="4">4 Stars</option>
-        <option value="5">5 Stars</option>
+        <option value="1">1+</option>
+        <option value="2">2+</option>
+        <option value="3">3+</option>
+        <option value="4">4+</option>
+        <option value="5">5</option>
       </select>
+      <button class="btn-view" (click)="onFilter()">Search</button>
     </div>
 
-    <!-- Hotels Grid -->
     @if (hotels.length === 0) {
-      <div class="empty-state">
-        <i class="pi pi-building"></i>
-        <p>No hotels found</p>
-      </div>
+      <div class="empty-state"><i class="pi pi-building"></i><p>No hotels found</p></div>
     } @else {
       <div class="row g-4">
         @for (hotel of hotels; track hotel._id) {
@@ -50,24 +40,29 @@
             <div class="hotel-card" (click)="goToHotel(hotel._id)">
               <div class="card-img"
                 [style.backgroundImage]="hotel.images?.length ? 'url(' + getImageUrl(hotel.images[0]) + ')' : 'none'"
-                [style.backgroundSize]="'cover'"
-                [style.backgroundPosition]="'center'">
+                [style.backgroundSize]="'cover'" [style.backgroundPosition]="'center'">
                 <span class="card-badge">{{ hotel.rating }} ★</span>
               </div>
               <div class="card-body">
                 <h3>{{ hotel.name }}</h3>
-                <p class="location">
-                  <i class="pi pi-map-marker"></i>
-                  {{ hotel.location }}
-                </p>
+                <p class="location"><i class="pi pi-map-marker"></i> {{ hotel.location }}</p>
                 <p class="description">{{ hotel.description }}</p>
+                @if (hotel.tags?.length) {
+                  <p class="description">
+                    @for (t of hotel.tags; track t._id || t) { <span class="summary-tag">{{ t.name || t }}</span> }
+                  </p>
+                }
                 <button class="btn-view">View Rooms →</button>
               </div>
             </div>
           </div>
         }
       </div>
+      <div class="filters-bar" style="margin-top:1rem; justify-content:center; gap:1rem;">
+        <button class="btn-view" (click)="prevPage()" [disabled]="page <= 1">Prev</button>
+        <span>Page {{ page }} / {{ pages }} ({{ total }} results)</span>
+        <button class="btn-view" (click)="nextPage()" [disabled]="page >= pages">Next</button>
+      </div>
     }
-
   </div>
 </div>

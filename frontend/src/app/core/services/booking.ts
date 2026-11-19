@@ -20,32 +20,33 @@ export class BookingService {
     );
   }
 
-  // Get my bookings (client)
-  getMyBookings() {
-    return this.http.get(`${this.apiUrl}/my`, 
-      { withCredentials: true }
-    );
+  getMyBookings(params: any = {}) {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k,v]) => { if (v !== undefined && v !== null && v !== '') qs.set(k, String(v)); });
+    const q = qs.toString();
+    return this.http.get(`${this.apiUrl}/my${q ? '?' + q : ''}`, { withCredentials: true });
   }
 
-  // Get hotel bookings (owner)
-  getHotelBookings(hotelId: string) {
-    return this.http.get(`${this.apiUrl}/hotel/${hotelId}`, 
-      { withCredentials: true }
-    );
+  getHotelBookings(hotelId: string, params: any = {}) {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k,v]) => { if (v !== undefined && v !== null && v !== '') qs.set(k, String(v)); });
+    const q = qs.toString();
+    return this.http.get(`${this.apiUrl}/hotel/${hotelId}${q ? '?' + q : ''}`, { withCredentials: true });
   }
 
-  // Get all bookings (admin)
-  getAllBookings() {
-    return this.http.get(`${this.apiUrl}/all`, 
-      { withCredentials: true }
-    );
+  getAllBookings(params: any = {}) {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k,v]) => { if (v !== undefined && v !== null && v !== '') qs.set(k, String(v)); });
+    const q = qs.toString();
+    return this.http.get(`${this.apiUrl}/all${q ? '?' + q : ''}`, { withCredentials: true });
   }
 
-  // Confirm booking (owner)
   confirmBooking(bookingId: string) {
-    return this.http.patch(`${this.apiUrl}/${bookingId}/confirm`, {}, 
-      { withCredentials: true }
-    );
+    return this.http.patch(`${this.apiUrl}/${bookingId}/confirm`, {}, { withCredentials: true });
+  }
+
+  completeBooking(bookingId: string) {
+    return this.http.patch(`${this.apiUrl}/${bookingId}/complete`, {}, { withCredentials: true });
   }
 
   // Cancel booking
