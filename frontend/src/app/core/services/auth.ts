@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+﻿import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, tap } from 'rxjs';
 import { Router } from '@angular/router';
@@ -9,20 +9,22 @@ import { Router } from '@angular/router';
 export class AuthService {
   private apiUrl = 'http://localhost:3000/api/auth';
 
-  // BehaviorSubject → stocke l'user courant (null = non connecté)
   private currentUserSubject = new BehaviorSubject<any>(null);
-
-  // Observable public que les composants peuvent écouter
   currentUser$ = this.currentUserSubject.asObservable();
 
   constructor(
     private http: HttpClient,
     private router: Router,
   ) {
-    // Récupère l'user depuis localStorage au démarrage
-    const savedUser = localStorage.getItem('zenUser');
-    if (savedUser) {
-      this.currentUserSubject.next(JSON.parse(savedUser));
+    if (typeof localStorage !== 'undefined') {
+      const savedUser = localStorage.getItem('zenUser');
+      if (savedUser) {
+        try {
+          this.currentUserSubject.next(JSON.parse(savedUser));
+        } catch {
+          this.currentUserSubject.next(null);
+        }
+      }
     }
   }
 
@@ -32,18 +34,22 @@ export class AuthService {
 
   login(data: any) {
     return this.http.post(`${this.apiUrl}/login`, data, { withCredentials: true }).pipe(
-      tap((res: any) => {
-        // Appelle /home pour récupérer les infos de l'user
+      tap(() => {
         this.fetchCurrentUser();
       }),
     );
   }
 
   fetchCurrentUser() {
-    this.http.get(`${this.apiUrl.replace('/auth', '')}/home`, { withCredentials: true }).subscribe({
-      next: (res: any) => {
-        localStorage.setItem('zenUser', JSON.stringify(res));
+    this.http.get<any>('http://localhost:3000/api/home', { withCredentials: true }).subscribe({
+      next: (res) => {
         this.currentUserSubject.next(res);
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('zenUser', JSON.stringify(res));
+        }
+      },
+      error: () => {
+        this.currentUserSubject.next(null);
       },
     });
   }
@@ -51,8 +57,10 @@ export class AuthService {
   logout() {
     return this.http.post(`${this.apiUrl}/logout`, {}, { withCredentials: true }).pipe(
       tap(() => {
-        localStorage.removeItem('zenUser');
         this.currentUserSubject.next(null);
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem('zenUser');
+        }
         this.router.navigate(['/login']);
       }),
     );
@@ -66,7 +74,6 @@ export class AuthService {
     return this.http.post(`${this.apiUrl}/resend-verification`, { email });
   }
 
-  // Getter pratique
   get currentUser() {
     return this.currentUserSubject.value;
   }

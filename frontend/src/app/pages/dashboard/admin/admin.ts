@@ -2,12 +2,12 @@ import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { AdminService } from '../../../core/services/admin';
 import { BookingService } from '../../../core/services/booking';
 import { HotelService } from '../../../core/services/hotel';
-import { DatePipe } from '@angular/common';
+import { DatePipe, JsonPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-admin',
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, JsonPipe, FormsModule],
   templateUrl: './admin.html',
   styleUrl: './admin.scss',
 })
