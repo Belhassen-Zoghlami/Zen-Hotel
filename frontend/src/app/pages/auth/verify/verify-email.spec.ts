@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ActivatedRoute, provideRouter } from '@angular/router';
+import { of } from 'rxjs';
 
 import { VerifyEmail } from './verify-email';
 
@@ -8,9 +10,12 @@ describe('VerifyEmail', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [VerifyEmail]
-    })
-    .compileComponents();
+      imports: [VerifyEmail],
+      providers: [
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { queryParams: of({ status: 'error', reason: 'test' }) } },
+      ],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(VerifyEmail);
     component = fixture.componentInstance;

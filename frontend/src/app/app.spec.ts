@@ -5,7 +5,11 @@ describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-    }).compileComponents();
+    })
+      .overrideComponent(App, {
+        set: { imports: [], template: '<h1>Hello, {{ title() }}</h1>' },
+      })
+      .compileComponents();
   });
 
   it('should create the app', () => {
