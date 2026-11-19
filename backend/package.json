@@ -4,9 +4,14 @@
   "description": "setup instruction:(execute the following on git bash in the project root)",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --runInBand --detectOpenHandles",
+    "test:unit": "jest --runInBand --detectOpenHandles tests/unit",
+    "test:integration": "jest --runInBand --detectOpenHandles tests/integration",
+    "test:coverage": "jest --runInBand --detectOpenHandles --coverage",
     "dev": "nodemon server.js",
-    "start": "nodemon server.js"
+    "start": "node server.js",
+    "start:dev": "nodemon server.js",
+    "lint": "node -c server.js && node -c src/app.js"
   },
   "keywords": [],
   "author": "",
@@ -28,7 +33,17 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "jest": "^29.7.0",
+    "mongodb-memory-server": "^10.1.4",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.1.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 30000,
+    "roots": ["<rootDir>/tests"],
+    "collectCoverageFrom": ["src/**/*.js", "!src/config/swagger.js"],
+    "coverageDirectory": "coverage"
   },
   "repository": {
     "type": "git",
