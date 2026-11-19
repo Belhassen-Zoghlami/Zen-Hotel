@@ -5,6 +5,7 @@
 # Backend
 backend/node_modules/
 backend/images/
+backend/coverage/
 
 # Frontend
 frontend/node_modules/
@@ -15,3 +16,4 @@ frontend/dist/
 *.log
 .DS_Store
 A*.md
+mongodb-binaries/

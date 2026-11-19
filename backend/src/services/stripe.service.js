@@ -1,8 +1,15 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const Stripe = require('stripe');
 
 const DOMAIN = process.env.DOMAIN || 'http://localhost:4200';
 
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error('STRIPE_SECRET_KEY is not configured');
+  return Stripe(key);
+}
+
 async function createCheckoutSession({ bookingId, amountUSD, hotelName, roomName }) {
+  const stripe = getStripe();
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
     payment_method_types: ['card'],
@@ -27,6 +34,7 @@ async function createCheckoutSession({ bookingId, amountUSD, hotelName, roomName
 }
 
 async function verifySession(sessionId) {
+  const stripe = getStripe();
   const session = await stripe.checkout.sessions.retrieve(sessionId);
   if (session.payment_status !== 'paid') {
     throw new Error(`Payment not completed: ${session.payment_status}`);
@@ -38,6 +46,7 @@ async function verifySession(sessionId) {
 }
 
 async function refundPayment(paymentIntentId) {
+  const stripe = getStripe();
   const refund = await stripe.refunds.create({
     payment_intent: paymentIntentId,
   });
