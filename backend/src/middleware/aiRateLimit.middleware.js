@@ -56,7 +56,8 @@ function _cleanupStaleIpRecords() {
 }
 
 // Run cleanup every hour
-setInterval(_cleanupStaleIpRecords, STORE_CLEANUP_INTERVAL);
+const cleanupTimer = setInterval(_cleanupStaleIpRecords, STORE_CLEANUP_INTERVAL);
+if (typeof cleanupTimer.unref === 'function') cleanupTimer.unref();
 _cleanupStaleIpRecords(); // immediate cleanup on start
 
 /**
