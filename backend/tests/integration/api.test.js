@@ -13,9 +13,9 @@ beforeAll(async () => {
   process.env.ADMIN_PASSWORD = 'Admin123!';
   await setupDb();
   app = require('../../src/app');
-});
+}, 60000);
 
-afterAll(async () => { await teardownDb(); });
+afterAll(async () => { await teardownDb(); }, 60000);
 afterEach(async () => { await clearDb(); });
 
 async function seedOwnerHotelRoom() {

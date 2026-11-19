@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../src/models/user.model');
@@ -10,14 +9,30 @@ async function setupDb() {
   process.env.JWT_SECRET = process.env.JWT_SECRET || 'testsecret123456';
   process.env.JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
   process.env.MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost/test';
+
+  const externalUri = process.env.MONGODB_URI || process.env.MONGO_TEST_URI;
+  if (externalUri) {
+    await mongoose.connect(externalUri, { dbName: process.env.MONGO_TEST_DB || 'zenhotel_test' });
+    return;
+  }
+
+  const { MongoMemoryServer } = require('mongodb-memory-server');
   mongo = await MongoMemoryServer.create();
   await mongoose.connect(mongo.getUri(), { dbName: 'zenhotel_test' });
 }
 
 async function teardownDb() {
-  if (mongoose.connection.readyState) await mongoose.connection.dropDatabase();
-  await mongoose.disconnect();
-  if (mongo) await mongo.stop();
+  try {
+    if (mongoose.connection.readyState) await mongoose.connection.dropDatabase();
+  } catch (e) {
+    // ignore cleanup errors in constrained environments
+  }
+  try {
+    await mongoose.disconnect();
+  } catch (e) {}
+  if (mongo) {
+    try { await mongo.stop(); } catch (e) {}
+  }
 }
 
 async function clearDb() {

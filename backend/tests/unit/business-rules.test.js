@@ -6,8 +6,8 @@ const Tag = require('../../src/models/tag.model');
 const Room = require('../../src/models/room.model');
 
 describe('Business rules and data model constraints', () => {
-  beforeAll(async () => { await setupDb(); });
-  afterAll(async () => { await teardownDb(); });
+  beforeAll(async () => { await setupDb(); }, 60000);
+  afterAll(async () => { await teardownDb(); }, 60000);
   afterEach(async () => { await clearDb(); });
 
   test('BR1: hotel rating must be between 1 and 5', async () => {
