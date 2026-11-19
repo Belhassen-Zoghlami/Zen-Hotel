@@ -151,6 +151,8 @@ router.get('/hotel/:hotelId', auth, reqRoles('owner', 'admin'), bookingControlle
  */
 router.patch('/:bookingId/confirm', auth, reqRoles('owner', 'admin'), bookingController.confirmBooking);
 
+router.patch('/:bookingId/complete', auth, reqRoles('owner', 'admin'), bookingController.completeBooking);
+
 /**
  * @swagger
  * /bookings/{bookingId}/cancel:

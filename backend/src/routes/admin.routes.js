@@ -4,6 +4,8 @@ const auth = require("../middleware/auth.middleware");
 const reqRole = require("../middleware/role.middleware");
 const adminController = require("../controllers/admin.controller");
 
+router.get("/metrics", auth, reqRole("admin"), adminController.getDashboardMetrics);
+
 /**
  * @swagger
  * tags:

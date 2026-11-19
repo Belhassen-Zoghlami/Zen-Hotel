@@ -79,11 +79,11 @@ const { cacheMiddleware } = require('../middleware/cache.middleware');
  *         description: Access unauthorized
  */
 //get all rooms route
-router.get('/:hotelId', cacheMiddleware(300000), optAuth, roomController.GetHotelRooms); // Cache for 5 minutes
+router.get('/:hotelId', optAuth, roomController.GetHotelRooms);
 //create room route
 router.post('/:hotelId', auth, reqRoles('owner','admin'), upload.array("images",5), roomController.CreateRoom);
 //get room by id route
-router.get('/:hotelId/:roomId', cacheMiddleware(300000), auth, roomController.GetRoom); // Cache for 5 minutes
+router.get('/:hotelId/:roomId', optAuth, roomController.GetRoom);
 //update room route
 router.patch('/:hotelId/:roomId', auth, reqRoles('owner','admin'), upload.array("images",5), roomController.UpdateRoom);
 //delete room route

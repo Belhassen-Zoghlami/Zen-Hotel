@@ -36,7 +36,8 @@ const authController = require("../controllers/auth.controller");
  */
 router.post("/register", authController.register);
 router.post("/login", authController.login);
-router.post("/logout", authController.Logout);
+const auth = require("../middleware/auth.middleware");
+router.post("/logout", auth, authController.Logout);
 router.get("/verify-email", authController.verifyEmail);
 router.post("/resend-verification", authController.resendVerification);
 

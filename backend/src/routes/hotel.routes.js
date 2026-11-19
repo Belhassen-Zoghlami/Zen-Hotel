@@ -76,7 +76,7 @@ router.post('/',auth,reqRoles('owner','admin'),upload.array("images",5),hotelCon
  *         description: List of hotels
  */
 //get all trivagos route
-router.get('/', cacheMiddleware(300000), optAuth, hotelController.GetAllHotels); // Cache for 5 minutes
+router.get('/', optAuth, hotelController.GetAllHotels);
 
 /**
  * @swagger
@@ -95,7 +95,7 @@ router.get('/', cacheMiddleware(300000), optAuth, hotelController.GetAllHotels);
  *         description: Hotel details
  */
 //get hotel by id route
-router.get('/:id', cacheMiddleware(300000), optAuth, hotelController.GetHotel); // Cache for 5 minutes
+router.get('/:id', optAuth, hotelController.GetHotel);
 
 /**
  * @swagger

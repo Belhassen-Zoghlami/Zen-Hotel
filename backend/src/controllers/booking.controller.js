@@ -8,54 +8,55 @@ const {
   sendBookingConfirmedToClient,
   sendBookingCancelledToClient,
 } = require("../services/email.service");
+const { logEvent } = require("../services/audit.service");
 
-//                                                                  Create Booking
+const VALID_TRANSITIONS = {
+  pending: ["confirmed", "cancelled"],
+  confirmed: ["cancelled", "completed"],
+  cancelled: [],
+  completed: [],
+};
+
+function assertTransition(from, to) {
+  return (VALID_TRANSITIONS[from] || []).includes(to);
+}
+
+async function findConflictingBooking(roomId, checkIn, checkOut, excludeBookingId = null) {
+  const query = {
+    room: roomId,
+    status: { $ne: "cancelled" },
+    checkIn: { $lt: new Date(checkOut) },
+    checkOut: { $gt: new Date(checkIn) },
+  };
+  if (excludeBookingId) query._id = { $ne: excludeBookingId };
+  return Booking.findOne(query);
+}
+
 exports.createBooking = async (req, res) => {
   try {
     const { roomId, hotelId, checkIn, checkOut } = req.body;
-
-    //   Vérifier que la chambre existe
+    if (!roomId || !hotelId || !checkIn || !checkOut) {
+      return res.status(400).json({ message: "roomId, hotelId, checkIn and checkOut are required" });
+    }
     const room = await Room.findById(roomId);
     if (!room) return res.status(404).json({ message: "Room not found" });
-
-    if (!room.isAvailable)
-      return res.status(400).json({ message: "Room is not available" });
-
-    //  Vérifier les conflits de dates
-    const conflict = await Booking.findOne({
-      room: roomId,
-      status: { $ne: "cancelled" },
-      $or: [
-        { checkIn: { $lt: new Date(checkOut), $gte: new Date(checkIn) } },
-        { checkOut: { $gt: new Date(checkIn), $lte: new Date(checkOut) } },
-        {
-          checkIn: { $lte: new Date(checkIn) },
-          checkOut: { $gte: new Date(checkOut) },
-        },
-      ],
-    });
-
-    if (conflict)
-      return res
-        .status(400)
-        .json({ message: "Room already booked for these dates" });
-
-    // Calculer le prix total
+    if (String(room.hotel) !== String(hotelId)) {
+      return res.status(400).json({ message: "Room does not belong to the specified hotel" });
+    }
+    if (!room.isAvailable) return res.status(400).json({ message: "Room is not available" });
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
-    const nights = Math.ceil(
-      (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24),
-    );
+    if (Number.isNaN(checkInDate.getTime()) || Number.isNaN(checkOutDate.getTime())) {
+      return res.status(400).json({ message: "Invalid dates" });
+    }
+    const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+    if (nights <= 0) return res.status(400).json({ message: "Check-out must be after check-in" });
 
-    if (nights <= 0)
-      return res
-        .status(400)
-        .json({ message: "Check-out must be after check-in" });
+    const conflict = await findConflictingBooking(roomId, checkInDate, checkOutDate);
+    if (conflict) return res.status(400).json({ message: "Room already booked for these dates" });
 
     const pricePerNight = parseFloat(room.pricePerNight.toString());
     const totalPrice = nights * pricePerNight;
-
-    //    Créer la réservation
     const booking = await Booking.create({
       client: req.user.id,
       room: roomId,
@@ -66,152 +67,150 @@ exports.createBooking = async (req, res) => {
       status: "pending",
     });
 
-    // ── Notify the hotel owner by email (non-blocking) ────────────────────
     try {
-      const hotel = await Hotel.findById(hotelId).populate(
-        "owner",
-        "name email",
-      );
+      const hotel = await Hotel.findById(hotelId).populate("owner", "name email");
       const client = await User.findById(req.user.id, "name email");
-
       if (hotel?.owner?.email) {
-        await sendBookingRequestToOwner({
-          owner: hotel.owner,
-          client,
-          hotel,
-          room,
-          checkIn: checkInDate,
-          checkOut: checkOutDate,
-          nights,
-          totalPrice,
-        });
+        await sendBookingRequestToOwner({ owner: hotel.owner, client, hotel, room, checkIn: checkInDate, checkOut: checkOutDate, nights, totalPrice });
       }
     } catch (emailErr) {
-      // Email failure must never break the booking response
-      console.error(
-        "[Booking] Failed to send owner notification email:",
-        emailErr.message,
-      );
+      console.error("[Booking] Failed to send owner notification email:", emailErr.message);
     }
 
-    res.status(201).json({
-      message: "Booking created successfully",
-      booking,
-      nights,
-      totalPrice,
-    });
+    await logEvent(req, { action: "BOOKING_CREATE", entity: "Booking", entityId: booking._id, details: { room: roomId, hotel: hotelId, status: booking.status, totalPrice } });
+    res.status(201).json({ message: "Booking created successfully", booking, nights, totalPrice });
   } catch (err) {
+    await logEvent(req, { action: "BOOKING_CREATE", entity: "Booking", status: "failure", details: { error: err.message } });
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-//                                                                  Get booked dates for a specific room (no auth)
 exports.getRoomBookedDates = async (req, res) => {
   try {
-    const bookings = await Booking.find({
-      room: req.params.roomId,
-      status: { $ne: 'cancelled' },
-    }).select('checkIn checkOut');
-
+    const bookings = await Booking.find({ room: req.params.roomId, status: { $ne: 'cancelled' } }).select('checkIn checkOut');
     res.json(bookings);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-//                                                                  Get client's bookings
 exports.getMyBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({ client: req.user.id })
-      .populate("room", "roomNumber type pricePerNight")
-      .populate("hotel", "name location")
-      .sort({ createdAt: -1 });
-
-    res.json(bookings);
+    const { status, from, to, page = 1, limit = 20 } = req.query;
+    const filter = { client: req.user.id };
+    if (status) filter.status = status;
+    if (from || to) {
+      filter.checkIn = {};
+      if (from) filter.checkIn.$gte = new Date(from);
+      if (to) filter.checkIn.$lte = new Date(to);
+    }
+    const lim = Math.min(Math.max(parseInt(limit,10)||20,1),100);
+    const pageNum = Math.max(parseInt(page,10)||1,1);
+    const skip = (pageNum-1)*lim;
+    const [items, total] = await Promise.all([
+      Booking.find(filter).populate("room", "roomNumber type pricePerNight").populate("hotel", "name location").sort({ createdAt: -1 }).skip(skip).limit(lim),
+      Booking.countDocuments(filter),
+    ]);
+    res.json({ items, total, page: pageNum, pages: Math.ceil(total/lim) || 1 });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 };
 
-//                                                                  Get bookings per hotel (owner)
 exports.getHotelBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({ hotel: req.params.hotelId })
-      .populate("client", "name email")
-      .populate("room", "roomNumber type")
-      .sort({ createdAt: -1 });
-
-    res.json(bookings);
+    const { status, from, to, page = 1, limit = 20 } = req.query;
+    const hotel = await Hotel.findById(req.params.hotelId);
+    if (!hotel) return res.status(404).json({ message: 'Hotel not found' });
+    if (req.user.role === 'owner' && hotel.owner.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Access unauthorized' });
+    }
+    const filter = { hotel: req.params.hotelId };
+    if (status) filter.status = status;
+    if (from || to) {
+      filter.checkIn = {};
+      if (from) filter.checkIn.$gte = new Date(from);
+      if (to) filter.checkIn.$lte = new Date(to);
+    }
+    const lim = Math.min(Math.max(parseInt(limit,10)||20,1),100);
+    const pageNum = Math.max(parseInt(page,10)||1,1);
+    const skip = (pageNum-1)*lim;
+    const [items, total] = await Promise.all([
+      Booking.find(filter).populate("client", "name email").populate("room", "roomNumber type").sort({ createdAt: -1 }).skip(skip).limit(lim),
+      Booking.countDocuments(filter),
+    ]);
+    res.json({ items, total, page: pageNum, pages: Math.ceil(total/lim) || 1 });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-//                                                                  Confirm booking (owner)
 exports.confirmBooking = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.bookingId)
       .populate("client", "name email")
       .populate("room", "roomNumber type pricePerNight")
-      .populate("hotel", "name location");
-
+      .populate({ path: "hotel", populate: { path: 'owner', select: 'name email' } });
     if (!booking) return res.status(404).json({ message: "Booking not found" });
-
-    if (booking.status !== "pending")
-      return res
-        .status(400)
-        .json({ message: "Only pending bookings can be confirmed" });
-
+    if (req.user.role === 'owner' && booking.hotel?.owner?._id?.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Access unauthorized' });
+    }
+    if (!assertTransition(booking.status, 'confirmed'))
+      return res.status(400).json({ message: "Only pending bookings can be confirmed" });
     booking.status = "confirmed";
-    booking.paymentStatus = "unpaid";
+    booking.paymentStatus = booking.paymentStatus || "unpaid";
     await booking.save();
-
-    // ── Notify the client by email (non-blocking) ─────────────────────────
     try {
       if (booking.client?.email) {
-        const nights = Math.ceil(
-          (new Date(booking.checkOut) - new Date(booking.checkIn)) /
-            (1000 * 60 * 60 * 24),
-        );
+        const nights = Math.ceil((new Date(booking.checkOut) - new Date(booking.checkIn)) / (1000 * 60 * 60 * 24));
         await sendBookingConfirmedToClient({ booking, nights });
       }
-    } catch (emailErr) {
-      console.error(
-        "[Booking] Failed to send confirmation email:",
-        emailErr.message,
-      );
-    }
-
+    } catch (emailErr) { console.error("[Booking] Failed to send confirmation email:", emailErr.message); }
+    await logEvent(req, { action: 'BOOKING_CONFIRM', entity: 'Booking', entityId: booking._id, details: { status: booking.status } });
     res.json({ message: "Booking confirmed successfully", booking });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 };
 
-//                                                                  Cancel booking (client, owner, admin)
+exports.completeBooking = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.bookingId).populate({ path: 'hotel', select: 'owner name' });
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+    if (req.user.role === 'owner' && booking.hotel?.owner?.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Access unauthorized' });
+    }
+    if (!assertTransition(booking.status, 'completed')) {
+      return res.status(400).json({ message: 'Only confirmed bookings can be completed' });
+    }
+    booking.status = 'completed';
+    await booking.save();
+    await logEvent(req, { action: 'BOOKING_COMPLETE', entity: 'Booking', entityId: booking._id });
+    res.json({ message: 'Booking completed successfully', booking });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
 exports.cancelBooking = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.bookingId)
       .populate("client", "name email")
       .populate("room", "roomNumber type pricePerNight")
-      .populate("hotel", "name location");
-
+      .populate({ path: "hotel", select: "name location owner" });
     if (!booking) return res.status(404).json({ message: "Booking not found" });
-
-    if (booking.status === "cancelled")
-      return res.status(400).json({ message: "Booking is already cancelled" });
-
+    if (booking.status === "cancelled") return res.status(400).json({ message: "Booking is already cancelled" });
+    if (booking.status === "completed") return res.status(400).json({ message: "Completed bookings cannot be cancelled" });
     const { role, id } = req.user;
-
-    // client peut annuler seulement sa réservation
     if (role === "client" && booking.client._id.toString() !== id)
       return res.status(403).json({ message: "Access unauthorized" });
+    if (role === 'owner' && booking.hotel?.owner?.toString() !== id)
+      return res.status(403).json({ message: 'Access unauthorized' });
 
     const cancelReason = req.body.cancelReason || null;
     booking.status = "cancelled";
     booking.cancelledBy = role;
     booking.cancelReason = cancelReason;
-
     if (booking.paymentStatus === "paid" && booking.stripePaymentIntentId) {
       booking.paymentStatus = "refunding";
       await booking.save();
@@ -223,48 +222,47 @@ exports.cancelBooking = async (req, res) => {
         booking.paymentStatus = "paid";
       }
     }
-
     await booking.save();
-
-    // ── Notify the client by email only when an owner/admin cancels (non-blocking) ──
     try {
-      // Don't email clients about their own cancellation — they know already
       if (role !== "client" && booking.client?.email) {
-        const nights = Math.ceil(
-          (new Date(booking.checkOut) - new Date(booking.checkIn)) /
-            (1000 * 60 * 60 * 24),
-        );
-        await sendBookingCancelledToClient({
-          booking,
-          nights,
-          cancelReason,
-          cancelledBy: role,
-        });
+        const nights = Math.ceil((new Date(booking.checkOut) - new Date(booking.checkIn)) / (1000 * 60 * 60 * 24));
+        await sendBookingCancelledToClient({ booking, nights, cancelReason, cancelledBy: role });
       }
-    } catch (emailErr) {
-      console.error(
-        "[Booking] Failed to send cancellation email:",
-        emailErr.message,
-      );
-    }
-
+    } catch (emailErr) { console.error("[Booking] Failed to send cancellation email:", emailErr.message); }
+    await logEvent(req, { action: 'BOOKING_CANCEL', entity: 'Booking', entityId: booking._id, details: { cancelledBy: role, reason: cancelReason } });
     res.json({ message: "Booking cancelled successfully", booking });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-//                                                                  Get all bookings (admin)
 exports.getAllBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find()
-      .populate("client", "name email")
-      .populate("room", "roomNumber type")
-      .populate("hotel", "name location")
-      .sort({ createdAt: -1 });
-
-    res.json(bookings);
+    const { status, hotel, client, from, to, page = 1, limit = 20 } = req.query;
+    const filter = {};
+    if (status) filter.status = status;
+    if (hotel) filter.hotel = hotel;
+    if (client) filter.client = client;
+    if (from || to) {
+      filter.checkIn = {};
+      if (from) filter.checkIn.$gte = new Date(from);
+      if (to) filter.checkIn.$lte = new Date(to);
+    }
+    const lim = Math.min(Math.max(parseInt(limit,10)||20,1),100);
+    const pageNum = Math.max(parseInt(page,10)||1,1);
+    const skip = (pageNum-1)*lim;
+    const [items, total] = await Promise.all([
+      Booking.find(filter)
+        .populate("client", "name email")
+        .populate("room", "roomNumber type")
+        .populate("hotel", "name location")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(lim),
+      Booking.countDocuments(filter),
+    ]);
+    res.json({ items, total, page: pageNum, pages: Math.ceil(total/lim) || 1 });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };

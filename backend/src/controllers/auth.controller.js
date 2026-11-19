@@ -6,15 +6,14 @@ const {
   sendVerificationEmail,
   sendOwnerRequestNotification,
 } = require("../services/email.service");
+const { logEvent } = require("../services/audit.service");
 require("dotenv").config();
 
-// In-memory cooldown store for resend verification: email -> lastSentAt timestamp
 const resendCooldowns = new Map();
-const RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds
+const RESEND_COOLDOWN_MS = 60 * 1000;
 
 const generateVerificationLink = (userId) => {
   const timestamp = Date.now();
-  // Use '|' as separator to avoid ambiguity with ObjectId hex strings (which contain dots via old format)
   const payload = `${userId}|${timestamp}`;
   const signature = crypto
     .createHmac("sha256", process.env.JWT_SECRET)
@@ -27,34 +26,37 @@ const generateVerificationLink = (userId) => {
 exports.register = async (req, res) => {
   try {
     const allowed = ["client", "owner"];
-    const { name, email, password } = req.body;
-    let role = allowed.includes(req.body.role) ? req.body.role : "client";
-
-    const exists = await User.findOne({ email });
+    const { name, email, password } = req.body || {};
+    const role = allowed.includes(req.body.role) ? req.body.role : "client";
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "Name, email and password are required" });
+    }
+    if (String(password).length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+    const exists = await User.findOne({ email: String(email).toLowerCase() });
     if (exists) {
+      await logEvent(req, { action: "AUTH_REGISTER", entity: "User", status: "failure", details: { email, reason: "email_exists" } });
       return res.status(400).json({ message: "Email already used" });
     }
-
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
-      role: role || "client",
+      role,
     });
     const verifyLink = generateVerificationLink(user._id);
     try {
       await sendVerificationEmail(user, verifyLink);
       if (user.role === "owner") await sendOwnerRequestNotification(user);
     } catch (err) {
-      user.deleteOne();
+      await user.deleteOne();
       console.error("Error sending validation email:", err);
-      return res
-        .status(500)
-        .json({ message: "Error sending validation email" });
+      await logEvent(req, { action: "AUTH_REGISTER", entity: "User", entityId: user._id, status: "failure", details: { email, reason: "email_send_failed" } });
+      return res.status(500).json({ message: "Error sending validation email" });
     }
-
+    await logEvent(req, { action: "AUTH_REGISTER", entity: "User", entityId: user._id, details: { email: user.email, role: user.role } });
     return res.status(201).json({
       message:
         user.role === "owner"
@@ -63,25 +65,27 @@ exports.register = async (req, res) => {
     });
   } catch (err) {
     console.error("Error during registration:", err);
-    return res.status(500).json({
-      message: "Server error",
-    });
+    await logEvent(req, { action: "AUTH_REGISTER", entity: "User", status: "failure", details: { error: err.message } });
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email }); //.select('+password');
+    const { email, password } = req.body || {};
+    if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
+    const user = await User.findOne({ email: String(email).toLowerCase() });
     if (!user) {
+      await logEvent(req, { action: "AUTH_LOGIN", entity: "User", status: "failure", details: { email, reason: "invalid_credentials" } });
       return res.status(400).json({ message: "Invalid credentials" });
     }
     const pwmatch = await bcrypt.compare(password, user.password);
     if (!pwmatch) {
+      await logEvent(req, { action: "AUTH_LOGIN", entity: "User", entityId: user._id, status: "failure", details: { email, reason: "invalid_credentials" } });
       return res.status(400).json({ message: "Invalid credentials" });
     }
-    // Admins are always pre-verified; skip the check for them
     if (!user.email_verified && user.role !== "admin") {
+      await logEvent(req, { action: "AUTH_LOGIN", entity: "User", entityId: user._id, status: "failure", details: { reason: "email_not_verified" } });
       return res.status(403).json({
         message: "Please verify your email before logging in.",
         code: "EMAIL_NOT_VERIFIED",
@@ -89,171 +93,105 @@ exports.login = async (req, res) => {
       });
     }
     if (!user.isActive) {
+      await logEvent(req, { action: "AUTH_LOGIN", entity: "User", entityId: user._id, status: "failure", details: { reason: "inactive" } });
       return res.status(403).json({ message: "Account suspended" });
     }
     if (user.role === "owner" && !user.isValidated) {
-      return res.status(403).json({
-        message: "Owner account awaiting admin approval",
-      });
+      await logEvent(req, { action: "AUTH_LOGIN", entity: "User", entityId: user._id, status: "failure", details: { reason: "owner_not_validated" } });
+      return res.status(403).json({ message: "Owner account awaiting admin approval" });
     }
     const token = jwt.sign(
-      {
-        id: user._id,
-        role: user.role,
-        name: user.name,
-      },
+      { id: user._id, role: user.role, name: user.name, email: user.email },
       process.env.JWT_SECRET,
-      {
-        expiresIn: process.env.JWT_EXPIRES_IN,
-      },
+      { expiresIn: process.env.JWT_EXPIRES_IN }
     );
-
     res.cookie("token", token, {
       httpOnly: true,
       secure: false,
       sameSite: "Strict",
       maxAge: 3600000,
     });
-
-    return res.json({
-      token,
-      user: { id: user._id, name: user.name, role: user.role },
-    });
+    await logEvent({ ...req, user: { id: user._id, role: user.role, email: user.email } }, { action: "AUTH_LOGIN", entity: "User", entityId: user._id, details: { email: user.email } });
+    return res.json({ token, user: { id: user._id, name: user.name, role: user.role } });
   } catch (err) {
-    res.status(500).json({
-      message: "server error",
-    });
+    await logEvent(req, { action: "AUTH_LOGIN", entity: "User", status: "failure", details: { error: err.message } });
+    res.status(500).json({ message: "server error" });
   }
 };
 
 exports.verifyEmail = async (req, res) => {
   const FRONTEND_BASE = "http://localhost:4200/verify-email";
   const { token } = req.query;
-
   if (!token) {
-    return res.redirect(
-      `${FRONTEND_BASE}?status=error&reason=${encodeURIComponent("Verification token is required")}`,
-    );
+    return res.redirect(`${FRONTEND_BASE}?status=error&reason=${encodeURIComponent("Verification token is required")}`);
   }
-
   try {
-    // Token format: userId|timestamp|signature  (pipe-separated, 3 parts)
     const parts = token.split("|");
     if (parts.length !== 3) {
-      return res.redirect(
-        `${FRONTEND_BASE}?status=error&reason=${encodeURIComponent("Invalid verification token format")}`,
-      );
+      return res.redirect(`${FRONTEND_BASE}?status=error&reason=${encodeURIComponent("Invalid verification token format")}`);
     }
-
-    const payload = parts[0] + "|" + parts[1]; // userId|timestamp
+    const payload = parts[0] + "|" + parts[1];
     const signature = parts[2];
     const userId = parts[0];
     const timestamp = parts[1];
-
-    // Verify HMAC signature
-    const expectedSignature = crypto
-      .createHmac("sha256", process.env.JWT_SECRET)
-      .update(payload)
-      .digest("hex");
-
+    const expectedSignature = crypto.createHmac("sha256", process.env.JWT_SECRET).update(payload).digest("hex");
     if (expectedSignature !== signature) {
-      return res.redirect(
-        `${FRONTEND_BASE}?status=error&reason=${encodeURIComponent("Invalid or expired verification link")}`,
-      );
+      return res.redirect(`${FRONTEND_BASE}?status=error&reason=${encodeURIComponent("Invalid or expired verification link")}`);
     }
-
     if (!userId || !timestamp) {
-      return res.redirect(
-        `${FRONTEND_BASE}?status=error&reason=${encodeURIComponent("Invalid verification token structure")}`,
-      );
+      return res.redirect(`${FRONTEND_BASE}?status=error&reason=${encodeURIComponent("Invalid verification token structure")}`);
     }
-
-    // Check link age (24-hour expiry)
     const linkAge = Date.now() - parseInt(timestamp, 10);
     const maxAge = 24 * 60 * 60 * 1000;
-
     if (linkAge > maxAge) {
-      return res.redirect(
-        `${FRONTEND_BASE}?status=error&reason=${encodeURIComponent("Verification link has expired")}`,
-      );
+      return res.redirect(`${FRONTEND_BASE}?status=error&reason=${encodeURIComponent("Verification link has expired")}`);
     }
-
     const user = await User.findById(userId);
-
     if (!user) {
-      return res.redirect(
-        `${FRONTEND_BASE}?status=error&reason=${encodeURIComponent("User not found")}`,
-      );
+      return res.redirect(`${FRONTEND_BASE}?status=error&reason=${encodeURIComponent("User not found")}`);
     }
-
     if (user.email_verified) {
-      return res.redirect(
-        `${FRONTEND_BASE}?status=error&reason=${encodeURIComponent("Email already verified")}`,
-      );
+      return res.redirect(`${FRONTEND_BASE}?status=error&reason=${encodeURIComponent("Email already verified")}`);
     }
-
     user.email_verified = true;
     await user.save();
-
+    await logEvent(req, { action: "AUTH_VERIFY_EMAIL", entity: "User", entityId: user._id, details: { email: user.email } });
     return res.redirect(`${FRONTEND_BASE}?status=success`);
   } catch (err) {
     console.error("Email verification error:", err);
-    return res.redirect(
-      `${FRONTEND_BASE}?status=error&reason=${encodeURIComponent("An error occurred during email verification")}`,
-    );
+    return res.redirect(`${FRONTEND_BASE}?status=error&reason=${encodeURIComponent("An error occurred during email verification")}`);
   }
 };
 
 exports.resendVerification = async (req, res) => {
   try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ message: "Email is required" });
-    }
-
-    // --- Rate-limit: 60-second cooldown per email ---
+    const { email } = req.body || {};
+    if (!email) return res.status(400).json({ message: "Email is required" });
     const now = Date.now();
     const lastSent = resendCooldowns.get(email);
     if (lastSent) {
       const elapsed = now - lastSent;
       const remaining = Math.ceil((RESEND_COOLDOWN_MS - elapsed) / 1000);
       if (elapsed < RESEND_COOLDOWN_MS) {
-        return res.status(429).json({
-          message: "Please wait before requesting another email.",
-          retryAfter: remaining,
-        });
+        return res.status(429).json({ message: "Please wait before requesting another email.", retryAfter: remaining });
       }
     }
-
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    if (user.email_verified) {
-      return res.status(400).json({ message: "Email already verified" });
-    }
-
+    const user = await User.findOne({ email: String(email).toLowerCase() });
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.email_verified) return res.status(400).json({ message: "Email already verified" });
     const verifyLink = generateVerificationLink(user._id);
     await sendVerificationEmail(user, verifyLink);
-
-    // Record send time AFTER a successful dispatch
     resendCooldowns.set(email, Date.now());
-
-    return res.status(200).json({
-      message: "Verification email resent successfully",
-    });
+    await logEvent(req, { action: "AUTH_RESEND_VERIFICATION", entity: "User", entityId: user._id, details: { email: user.email } });
+    return res.status(200).json({ message: "Verification email resent successfully" });
   } catch (err) {
     console.error("Resend verification error:", err);
-    return res.status(500).json({
-      message: "Error resending verification email",
-    });
+    return res.status(500).json({ message: "Error resending verification email" });
   }
 };
 
-exports.Logout = (req, res) => {
+exports.Logout = async (req, res) => {
+  await logEvent(req, { action: "AUTH_LOGOUT", entity: "User", entityId: req.user?.id || null });
   res.clearCookie("token");
   res.json({ message: "User Logged out successfully" });
 };
