@@ -1,7 +1,9 @@
 name: FlowLine scenarios
-run-name: "FlowLine scenario: ${{ inputs.scenario }}"
+run-name: "FlowLine scenario: ${{ inputs.scenario || 'npm_dependency' }}"
 
 on:
+  push:
+    branches: [main, master]
   workflow_dispatch:
     inputs:
       scenario:
@@ -35,6 +37,7 @@ jobs:
         shell: bash
     env:
       CI: "true"
+      SCENARIO: ${{ inputs.scenario || 'npm_dependency' }}
 
     steps:
       - name: Checkout
@@ -46,25 +49,25 @@ jobs:
           node-version: '20'
 
       - name: Dependency failure
-        if: inputs.scenario == 'npm_dependency'
+        if: env.SCENARIO == 'npm_dependency'
         working-directory: backend
         run: npm view flowline-test-package-does-not-exist@0.0.1
 
       - name: Import failure
-        if: inputs.scenario == 'node_import'
+        if: env.SCENARIO == 'node_import'
         working-directory: backend
         run: node -e "require('./src/flowline-missing-module')"
 
       - name: Syntax failure
-        if: inputs.scenario == 'syntax'
+        if: env.SCENARIO == 'syntax'
         run: node -e "const value = ;"
 
       - name: Test assertion failure
-        if: inputs.scenario == 'test_assertion'
+        if: env.SCENARIO == 'test_assertion'
         run: node -e "require('node:assert').strictEqual(1, 2)"
 
       - name: Frontend test failure
-        if: inputs.scenario == 'frontend_test'
+        if: env.SCENARIO == 'frontend_test'
         working-directory: frontend
         run: |
           npm ci --no-audit --no-fund
@@ -72,35 +75,35 @@ jobs:
           node -e "require('node:assert').strictEqual('FlowLine', 'Zen-Hotel')"
 
       - name: Build failure
-        if: inputs.scenario == 'build'
+        if: env.SCENARIO == 'build'
         run: |
           echo "src/app/flowline-test.ts:1:1: error TS1005: ';' expected"
           exit 1
 
       - name: Shell failure
-        if: inputs.scenario == 'shell'
+        if: env.SCENARIO == 'shell'
         run: flowline-command-that-does-not-exist
 
       - name: Docker failure
-        if: inputs.scenario == 'docker'
+        if: env.SCENARIO == 'docker'
         run: |
           echo "ERROR: failed to solve: process did not complete"
           exit 1
 
       - name: Timeout failure
-        if: inputs.scenario == 'timeout'
+        if: env.SCENARIO == 'timeout'
         run: |
           echo "Error: operation timed out while waiting for the database"
           exit 1
 
       - name: Generic failure
-        if: inputs.scenario == 'generic'
+        if: env.SCENARIO == 'generic'
         run: |
           echo "error: flowline generic failure"
           exit 1
 
       - name: Unparsed failure
-        if: inputs.scenario == 'unparsed'
+        if: env.SCENARIO == 'unparsed'
         run: |
           echo "All checks passed"
           exit 1
