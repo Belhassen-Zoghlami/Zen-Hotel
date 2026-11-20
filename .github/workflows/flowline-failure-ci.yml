@@ -1,0 +1,106 @@
+name: FlowLine scenarios
+run-name: "FlowLine scenario: ${{ inputs.scenario }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: "Failure scenario to send to FlowLine"
+        required: true
+        default: npm_dependency
+        type: choice
+        options:
+          - npm_dependency
+          - node_import
+          - syntax
+          - test_assertion
+          - frontend_test
+          - build
+          - shell
+          - docker
+          - timeout
+          - generic
+          - unparsed
+
+permissions:
+  contents: read
+
+jobs:
+  scenario:
+    name: Run failure scenario
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    env:
+      CI: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Dependency failure
+        if: inputs.scenario == 'npm_dependency'
+        working-directory: backend
+        run: npm view flowline-test-package-does-not-exist@0.0.1
+
+      - name: Import failure
+        if: inputs.scenario == 'node_import'
+        working-directory: backend
+        run: node -e "require('./src/flowline-missing-module')"
+
+      - name: Syntax failure
+        if: inputs.scenario == 'syntax'
+        run: node -e "const value = ;"
+
+      - name: Test assertion failure
+        if: inputs.scenario == 'test_assertion'
+        run: node -e "require('node:assert').strictEqual(1, 2)"
+
+      - name: Frontend test failure
+        if: inputs.scenario == 'frontend_test'
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm test -- --watch=false --watchAll=false || true
+          node -e "require('node:assert').strictEqual('FlowLine', 'Zen-Hotel')"
+
+      - name: Build failure
+        if: inputs.scenario == 'build'
+        run: |
+          echo "src/app/flowline-test.ts:1:1: error TS1005: ';' expected"
+          exit 1
+
+      - name: Shell failure
+        if: inputs.scenario == 'shell'
+        run: flowline-command-that-does-not-exist
+
+      - name: Docker failure
+        if: inputs.scenario == 'docker'
+        run: |
+          echo "ERROR: failed to solve: process did not complete"
+          exit 1
+
+      - name: Timeout failure
+        if: inputs.scenario == 'timeout'
+        run: |
+          echo "Error: operation timed out while waiting for the database"
+          exit 1
+
+      - name: Generic failure
+        if: inputs.scenario == 'generic'
+        run: |
+          echo "error: flowline generic failure"
+          exit 1
+
+      - name: Unparsed failure
+        if: inputs.scenario == 'unparsed'
+        run: |
+          echo "All checks passed"
+          exit 1
