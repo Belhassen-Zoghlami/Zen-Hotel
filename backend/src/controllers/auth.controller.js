@@ -20,7 +20,8 @@ const generateVerificationLink = (userId) => {
     .update(payload)
     .digest("hex");
   const token = encodeURIComponent(`${payload}|${signature}`);
-  return `http://localhost:3000/api/auth/verify-email?token=${token}`;
+  const baseUrl = process.env.BACKEND_URL || "http://localhost:3000";
+  return `${baseUrl}/api/auth/verify-email?token=${token}`;
 };
 
 exports.register = async (req, res) => {
@@ -47,22 +48,29 @@ exports.register = async (req, res) => {
       role,
     });
     const verifyLink = generateVerificationLink(user._id);
-    try {
-      await sendVerificationEmail(user, verifyLink);
-      if (user.role === "owner") await sendOwnerRequestNotification(user);
-    } catch (err) {
-      await user.deleteOne();
-      console.error("Error sending validation email:", err);
-      await logEvent(req, { action: "AUTH_REGISTER", entity: "User", entityId: user._id, status: "failure", details: { email, reason: "email_send_failed" } });
-      return res.status(500).json({ message: "Error sending validation email" });
+    const mailConfigured = !!(process.env.MAIL_USER && process.env.MAIL_PASS && process.env.MAIL_FROM);
+    if (mailConfigured) {
+      try {
+        await sendVerificationEmail(user, verifyLink);
+        if (user.role === "owner") await sendOwnerRequestNotification(user);
+      } catch (err) {
+        await user.deleteOne();
+        console.error("Error sending validation email:", err);
+        await logEvent(req, { action: "AUTH_REGISTER", entity: "User", entityId: user._id, status: "failure", details: { email, reason: "email_send_failed" } });
+        return res.status(500).json({ message: "Error sending validation email" });
+      }
+    } else {
+      user.email_verified = true;
+      await user.save();
+      console.warn("[dev] Mail not configured; auto-verified user:", user.email, "verifyLink:", verifyLink);
     }
     await logEvent(req, { action: "AUTH_REGISTER", entity: "User", entityId: user._id, details: { email: user.email, role: user.role } });
-    return res.status(201).json({
-      message:
-        user.role === "owner"
-          ? "owner account pending validation"
-          : "user registration successful!",
-    });
+    const message = !mailConfigured
+      ? "user registration successful! (email auto-verified in dev)"
+      : user.role === "owner"
+        ? "owner account pending validation"
+        : "user registration successful!";
+    return res.status(201).json({ message });
   } catch (err) {
     console.error("Error during registration:", err);
     await logEvent(req, { action: "AUTH_REGISTER", entity: "User", status: "failure", details: { error: err.message } });

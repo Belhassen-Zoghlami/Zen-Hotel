@@ -1,13 +1,25 @@
 const nodemailer = require("nodemailer");
 require("dotenv").config();
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS,
-  },
-});
+const isMailConfigured = () =>
+  Boolean(process.env.MAIL_USER && process.env.MAIL_PASS && process.env.MAIL_FROM);
+
+let transporter;
+const getTransporter = () => {
+  if (!isMailConfigured()) {
+    return { sendMail: async () => console.warn("[mail] MAIL_* not configured; skipping email send") };
+  }
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS,
+      },
+    });
+  }
+  return transporter;
+};
 
 exports.sendOwnerValidationEmail = async (user) => {
   const mail = {
@@ -191,7 +203,7 @@ exports.sendOwnerValidationEmail = async (user) => {
 </html>
 `,
   };
-  await transporter.sendMail(mail);
+  await getTransporter().sendMail(mail);
 };
 
 //(incomplete) idea: email verification for all users on signup (before validation for owner)
@@ -372,11 +384,11 @@ exports.sendVerificationEmail = async (user, verificationLink) => {
 </html>
 `,
   };
-  await transporter.sendMail(mail);
+  await getTransporter().sendMail(mail);
 };
 
 exports.sendOwnerRequestNotification = async (user) => {
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: process.env.MAIL_FROM,
     to: process.env.ADMIN_EMAIL,
     subject: "New Owner Validation Request",
@@ -726,7 +738,7 @@ exports.sendBookingRequestToOwner = async ({
       </a>
     </div>`;
 
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: process.env.MAIL_FROM,
     to: owner.email,
     subject: `New Booking Request — ${hotel.name}`,
@@ -782,7 +794,7 @@ exports.sendBookingConfirmedToClient = async ({ booking, nights }) => {
       </a>
     </div>`;
 
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: process.env.MAIL_FROM,
     to: client.email,
     subject: `Booking Confirmed — ${hotel.name}`,
@@ -853,7 +865,7 @@ exports.sendBookingCancelledToClient = async ({
       </a>
     </div>`;
 
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: process.env.MAIL_FROM,
     to: client.email,
     subject: `Booking Cancelled — ${hotel.name}`,

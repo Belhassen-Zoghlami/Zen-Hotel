@@ -19,6 +19,11 @@ services:
     environment:
       - MONGO_URI=mongodb://mongo:27017/hotel_booking
       - PORT=3000
+      - JWT_SECRET=dev-compose-jwt-secret-change-me
+      - JWT_EXPIRES_IN=7d
+      - ADMIN_EMAIL=admin@zenhotel.local
+      - ADMIN_PASSWORD=ChangeMe123!
+      - FRONTEND_URL=http://localhost:4200
     ports:
       - "3000:3000"
     depends_on:
