@@ -1,109 +1,65 @@
-name: FlowLine scenarios
-run-name: "FlowLine scenario: ${{ inputs.scenario || 'npm_dependency' }}"
+name: FlowLine Failure Demo
 
 on:
-  push:
-    branches: [main, master]
   workflow_dispatch:
     inputs:
       scenario:
-        description: "Failure scenario to send to FlowLine"
+        description: Failure scenario to emit
         required: true
-        default: npm_dependency
+        default: dependency
         type: choice
         options:
-          - npm_dependency
-          - node_import
+          - dependency
+          - import
           - syntax
-          - test_assertion
-          - frontend_test
-          - build
-          - shell
-          - docker
+          - test
           - timeout
-          - generic
-          - unparsed
-
-permissions:
-  contents: read
+          - build
+          - unclassified
+  push:
+    branches: [failure-demo] # change to [main, master] if you want every push
 
 jobs:
-  scenario:
-    name: Run failure scenario
+  emit-failure:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        shell: bash
+    timeout-minutes: 5
     env:
-      CI: "true"
-      SCENARIO: ${{ inputs.scenario || 'npm_dependency' }}
-
+      SCENARIO: ${{ inputs.scenario || 'dependency' }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Dependency failure
-        if: env.SCENARIO == 'npm_dependency'
-        working-directory: backend
-        run: npm view flowline-test-package-does-not-exist@0.0.1
-
-      - name: Import failure
-        if: env.SCENARIO == 'node_import'
-        working-directory: backend
-        run: node -e "require('./src/flowline-missing-module')"
-
-      - name: Syntax failure
-        if: env.SCENARIO == 'syntax'
-        run: node -e "const value = ;"
-
-      - name: Test assertion failure
-        if: env.SCENARIO == 'test_assertion'
-        run: node -e "require('node:assert').strictEqual(1, 2)"
-
-      - name: Frontend test failure
-        if: env.SCENARIO == 'frontend_test'
-        working-directory: frontend
+      - name: Emit ${{ env.SCENARIO }} failure
         run: |
-          npm ci --no-audit --no-fund
-          npm test -- --watch=false --watchAll=false || true
-          node -e "require('node:assert').strictEqual('FlowLine', 'Zen-Hotel')"
-
-      - name: Build failure
-        if: env.SCENARIO == 'build'
-        run: |
-          echo "src/app/flowline-test.ts:1:1: error TS1005: ';' expected"
-          exit 1
-
-      - name: Shell failure
-        if: env.SCENARIO == 'shell'
-        run: flowline-command-that-does-not-exist
-
-      - name: Docker failure
-        if: env.SCENARIO == 'docker'
-        run: |
-          echo "ERROR: failed to solve: process did not complete"
-          exit 1
-
-      - name: Timeout failure
-        if: env.SCENARIO == 'timeout'
-        run: |
-          echo "Error: operation timed out while waiting for the database"
-          exit 1
-
-      - name: Generic failure
-        if: env.SCENARIO == 'generic'
-        run: |
-          echo "error: flowline generic failure"
-          exit 1
-
-      - name: Unparsed failure
-        if: env.SCENARIO == 'unparsed'
-        run: |
-          echo "All checks passed"
-          exit 1
+          case "$SCENARIO" in
+            dependency)
+              mkdir -p /tmp/demo-dep
+              cd /tmp/demo-dep
+              npm install this-package-does-not-exist-xyz@9.9.9 --no-audit --no-fund
+              ;;
+            import)
+              node -e "require('module-does-not-exist-xyz')"
+              ;;
+            syntax)
+              printf 'const = ;\n' > /tmp/broken.js
+              node -c /tmp/broken.js
+              ;;
+            test)
+              node -e "const assert = require('node:assert'); assert.equal(1, 2, 'expected equal values')"
+              ;;
+            timeout)
+              echo "Error: timeout while waiting for service" >&2
+              exit 1
+              ;;
+            build)
+              echo "error TS1005: ',' expected." >&2
+              exit 1
+              ;;
+            unclassified)
+              echo "##[error]Renderer stopped with status 7" >&2
+              exit 1
+              ;;
+            *)
+              echo "unknown scenario: $SCENARIO" >&2
+              exit 1
+              ;;
+          esac
